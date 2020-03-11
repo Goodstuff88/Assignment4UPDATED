@@ -1,24 +1,106 @@
 ---
-title: "Ass_4"
-output: pdf_document
+title: "Assignment 4"
+author: "Gustav Oosthuizen - OSTGUS001"
+date: '`r format(Sys.Date(), "%d-%B-%Y")`'
+output:
+  pdf_document:
+    highlight: pygments
+    keep_tex: yes
+    number_sections: yes
+    toc: yes
+    toc_depth: 4
+    fig_caption: true
+citation_package: "biblatex"
+bibliography: "Ass_4.bib"
+    
 ---
-git config -- user.email "ostgus001@myuct.ac.za"
-  git config -- user.name "Goodstuff88"
-
 
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
-```{r test}
+\pagebreak
 
+```{r installing packages, include=FALSE}
 
+#Steps:
 
+# 1. Installing "basic" packages:
 
-x <- 4
-y <- 5
+#install.packages("tidyverse")
+#install.packages("remotes")
 
-z <- x*y
+library(tidyverse)
+library(remotes)
+
+# 2. Installing packages used to get corona virus data set
+
+#remotes::install_github('pzhaonet/ncovr')
+#install.packages("ncovr")
+#library(ncovr)
 
 ```
+
+```{r Loadinging and transforming most current data, include=FALSE}
+
+# # CODE DOES NOT WORK
+# 
+# # Note: Only run the following chunk if the latest conona data wants to be obtained:
+# 
+# # Run the following command to get the latest data
+# ncov <- get_ncov()
+# 
+# # To only extract the "area" data frame
+# ncov <- ncov$area
+# 
+# # a function for converting Julian time to ymd_
+# conv_time <- function(x){
+#   as.POSIXct('1970-01-01', tz = 'GMT') + x / 1000
+# }
+# 
+# # convert updateTime from Julian date to ymd-hms
+# ncov$updateTime <- conv_time(ncov$updateTime)
+# 
+# 
+# # Will save the latest data 
+# save(ncov, file = "ncov-latest.Rdata")
+
+```
+
+\section{Data wrangling} \label{DW section}
+
+The data wrangling consist of importing, tidying and transforming the data set [@wickham2016r].
+
+\subsection{Imporing data} 
+
+As mentioned in section \ref{DW section} the first step of data wrangling is importing the data.
+```{r importing data, echo=FALSE}
+
+# Importing the data set "ncov"
+
+load("C:/Users/Gustav/Desktop/MSc Data Science 1st year/Exploratory data analysis/Assignments/Assignment4/ncov-latest (1).Rdata")
+
+head(ncov, 5)
+
+```  
+
+\section{Visualisations}
+
+As seen by figure \ref{fig:Normal_Distribution}, the normal distribution is plotted.
+Remember the default figure width height is 6 x 4.5 
+
+```{r Normal_Distribution, fig.height= 3, fig.width=4.5 , fig.align='center', fig.cap= "The normal distribution curve", echo=FALSE}
+
+x <- rnorm(100)
+
+hist(x)
+
+
+```
+
+\pagebreak
+
+\section{References}
+
+
