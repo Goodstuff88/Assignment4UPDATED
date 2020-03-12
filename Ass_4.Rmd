@@ -12,7 +12,6 @@ output:
     fig_caption: true
 citation_package: "biblatex"
 bibliography: "Ass_4.bib"
-    
 ---
 
 
@@ -33,6 +32,7 @@ knitr::opts_chunk$set(echo = TRUE)
 
 library(tidyverse)
 library(remotes)
+library(plotly)
 
 # 2. Installing packages used to get corona virus data set
 
@@ -44,7 +44,7 @@ library(remotes)
 
 ```{r Loadinging and transforming most current data, include=FALSE}
 
-# # CODE DOES NOT WORK
+###### CODE DOES NOT WORK ######
 # 
 # # Note: Only run the following chunk if the latest conona data wants to be obtained:
 # 
@@ -85,6 +85,104 @@ head(ncov, 5)
 
 ```  
 
+\subsection{Tiding and transforming the data}
+
+The second and thrid steps of data wrangling is tiding and transforming the data. The variables of the "ncovr" data set will be investigated and the nesseccary changes/transformations will be made to get the data in a tidy format.   
+
+```{r ncovr variable investigation, include=FALSE}
+
+# Steps:
+
+# 1. General structure of the data set:
+
+glimpse(ncov)
+
+structure(ncov)
+
+# 2. Variables that seem to have no value and should be removed.
+
+# provinceName: Chinese writings - no use
+# provinceShortName: Chinese writings - no use
+# comment: Chinese writings - no use
+# statisticsData: Contains a lot of NA's. Cant see the use in variable that gives link.
+# cities: Contains a lot of NULL values that are useless.
+# countryName: Chinese writings - no use
+# continentName:Chinese writings - no use
+# operator: No use for assignment
+# countryShortCode: Contains a lot of NA's. Would Rather remove.
+# createTime: Contains a lot of NA's and dont know meaning
+# modifyTime: Contains a lot of NA's and dont know meaning 
+# cityName: Contains no names and NA's
+# province_en: Contains no names and NA's 
+
+#3.1 Investigating "comment" variable:
+
+ncov %>%
+  filter(comment != "") %>%
+  count()
+
+# Conclution: Most rows (7598) have no comments in them and it 
+
+#3.2 investigating "location.ID" variable:
+
+sum(is.na(ncov$locationId))
+
+# Conclution: No missing values, can be useful.
+
+#3.3 Investigating "statisticsData" variable:
+
+sum(is.na(ncov$statisticsData))
+
+ncov %>%
+  filter(!is.na(ncov$statisticsData))
+
+#Conclution:Contains a lot of NA values
+
+#3.4 Investigating "cities" variable
+
+# view first data frame in list
+
+ncov$cities[1]
+
+# Conclution: Contains a lot of NULL values. Values that are not NUll are data frames that seem to have similar but less data of than the original data set. 
+
+#3.5 Investigating "operator" variable
+
+sum(is.na(ncov$operator))
+
+ncov %>%
+  filter(!is.na(ncov$operator))
+  
+# Conclution: Don't see the use of including variable for the purpose of assignment.
+
+#3.6 Investigating "countryShortCode" variable
+
+sum(is.na(ncov$countryShortCode))
+
+# Conclution: Contains a lot of NA's. Would Rather remove.
+
+# 3.6 Investigating "province_en" variable 
+
+sum(is.na(ncov[,23]))
+
+ncov %>%
+  filter(!is.na(province_en))
+
+# Conclution: Contains a lot of NA's. Would Rather remove
+
+```
+
+
+```{r Removing unswanted variables from ncov, echo=FALSE}
+
+ncov_Updated <- ncov %>%
+  select(-c("provinceName", "provinceShortName", "comment", "statisticsData", "cities", "countryName", "continentName","operator", "countryShortCode", "createTime", "modifyTime", "cityName", "province_en" ))
+
+head(ncov_Updated,5)
+```
+
+
+
 \section{Visualisations}
 
 As seen by figure \ref{fig:Normal_Distribution}, the normal distribution is plotted.
@@ -102,5 +200,4 @@ hist(x)
 \pagebreak
 
 \section{References}
-
 
