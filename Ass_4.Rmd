@@ -29,10 +29,13 @@ knitr::opts_chunk$set(echo = TRUE)
 
 #install.packages("tidyverse")
 #install.packages("remotes")
+#install.packages("maps")
 
 library(tidyverse)
 library(remotes)
 library(plotly)
+library(leaflet)
+library(maps)
 
 # 2. Installing packages used to get corona virus data set
 
@@ -172,6 +175,7 @@ ncov %>%
 
 ```
 
+Start of code here
 
 ```{r Removing unswanted variables from ncov, echo=FALSE}
 
@@ -181,7 +185,163 @@ ncov_Updated <- ncov %>%
 head(ncov_Updated,5)
 ```
 
+```{r confirming data values}
 
+# According to the author the following should be true:
+
+# confirmedCount = currentConfirmedCount + curedCount + deadCount
+
+# An description of the variables are as follows:
+# 1. confirmedCount: The amount of people that has/had the corona virus
+# 2. currentConfirmedCount: The number of people whom currenly (given the time and area) has the corona virus
+# 3. curedCount: The amount of people who had the corona virus
+# 4. deadCount: The number of people who died from the corona virus
+
+# But in some cases the currentConfirmedCount has a N/A value assiciated with it. This can mean that the value is uncertain. But since the other values of the expression is know, the value can be calculated.
+
+# Steps:
+
+# 1. Creating new variable "currentConfirmedCount_Complete" and removing o
+
+ncov_Updated <-  ncov_Updated %>%
+  mutate(currentConfirmedCount_Complete = confirmedCount - curedCount - deadCount)
+
+# 2. Checking that the "currentConfirmedCount_Complete" equals the "currentConfirmedCount" for all cases where "currentConfirmedCount" is not NA.
+
+ncov_Updated %>%
+  select(currentConfirmedCount, currentConfirmedCount_Complete) %>%
+  filter(!is.na(currentConfirmedCount)) %>%
+  filter(currentConfirmedCount != currentConfirmedCount_Complete)
+
+# Therfore we can conclude that the way of estimating currentConfirmedCount_Complete is correct
+
+# 3. Removing the currentConfirmedCount
+
+ncov_Updated <- ncov_Updated %>%
+  select(-c("currentConfirmedCount"))
+
+# 4. Since "suspectedCount" + "curedCount" + "deadCount" does not = "confirmedCount", it seems that the variable has a lot of uncertainty attached to it. Therefore it will be excluded from the analysis.
+
+ncov_Updated <- ncov_Updated %>%
+  select(-c("suspectedCount"))
+
+# 5. Renaming and rearranging some of the variables
+
+ncov_Updated <- ncov_Updated %>%
+  rename( Country_Name = countryEnglishName,
+          Continent_Name = continentEnglishName,
+          Province_Name = provinceEnglishName,
+          Location_ID = locationId)
+
+ncov_Updated <- ncov_Updated[ ,c(9, 2, 3, 1, 4, 6, 5, 7, 8)] 
+
+```
+
+```{r Final checking for missing values}
+
+#steps:
+
+# 1. Checking which variables in data set contains missing values
+
+sum(is.na(ncov_Updated$currentConfirmedCount_Complete))
+sum(is.na(ncov_Updated$curedCount))
+sum(is.na(ncov_Updated$deadCount))
+sum(is.na(ncov_Updated$confirmedCount))
+sum(is.na(ncov_Updated$Location_ID))
+sum(is.na(ncov_Updated$Continent_Name))
+sum(is.na(ncov_Updated$Country_Name))
+sum(is.na(ncov_Updated$Province_Name))
+sum(is.na(ncov_Updated$updateTime))
+
+# "Continent_Name", "Country_Name" and "Province_Name" seems to have missing vaues which will be probalmatic 
+
+# 2. Filtering to see these missing values
+
+# 2.1  "Continent_Name"
+
+ncov_Updated %>%
+  filter(is.na(Continent_Name))
+
+# 2.1  "Country_name"
+
+ncov_Updated %>%
+  filter(is.na(Country_Name))
+
+# 2.1  "Province_Name"
+
+ncov_Updated %>%
+  filter(is.na(Province_Name))
+
+
+
+ncov_Updated %>%
+  group_by(Continent_Name)%>%
+summarise(count = n())
+
+sum(is.na(ncov_Updated$Continent_Name))
+
+ncov_Updated %>%
+
+```
+
+```{r correcting missing values}
+
+# Steps: 
+
+# 1.  Creating  completed data frame with the countries and their associated contitnents 
+
+Continent_Country_df <- ncov_Updated %>%
+  group_by(Continent_Name, Country_Name) %>%
+  summarise(count = n()) %>%
+  na.omit() %>%
+  select(Country_Name, Continent_Name) %>%
+  as.data.frame()
+
+Na_Entry <- data.frame(Country_Name =  NA,
+                       Continent_Name = NA)
+
+Continent_Country_df <-  rbind(Continent_Country_df, Na_Entry) %>%
+  rename(Continent_NEW_Name = Continent_Name)
+
+
+# 2. Using the created data frame to fill in for the missing values of the original data frame.
+
+# 2.1 Joining by continent first
+
+Test_df <-  left_join(ncov_Updated, Continent_Country_df, by = "Country_Name" )
+
+Replace_df <- Test_df %>%
+  filter(is.na(Continent_NEW_Name)) %>%
+  select(Continent_Name) 
+
+# Replacing NA values
+
+# Basic coding 
+
+for(i in 1:nrow(Test_df)) {
+  
+  if (is.na(Test_df$Continent_NEW_Name[i])) {
+    Test_df$Continent_NEW_Name[i] = Test_df$Continent_Name[i] 
+  }
+  
+}
+  
+sum(is.na(Test_df$Continent_NEW_Name))
+
+Test_df %>%
+ filter(is.na(Continent_NEW_Name))
+```
+
+
+```{r leaflet testing}
+world_map <- map(database = "world", plot = FALSE, fill = TRUE)
+
+leaflet()  %>%
+  addProviderTiles(providers$Thunderforest.Transport) %>%
+  setView(lng = 116.363625  , lat = 39.913818, zoom = 4) %>%
+  addCircles(lng = 116.363625  , lat = 39.913818 )
+
+```
 
 \section{Visualisations}
 
