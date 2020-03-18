@@ -25,17 +25,29 @@ knitr::opts_chunk$set(echo = TRUE)
 
 #Steps:
 
-# 1. Installing "basic" packages:
+# 1. Installing packages used for analysis :
 
 #install.packages("tidyverse")
 #install.packages("remotes")
 #install.packages("maps")
+#install.packages("geojsonio")
+#install.packages("rgdal")
+#install.packages("spdplyr")
+#install.packages("WDI")
+#install.packages("sf")
+
 
 library(tidyverse)
 library(remotes)
 library(plotly)
 library(leaflet)
 library(maps)
+library(geojsonio)
+library(rgdal)
+library(spdplyr)
+library(WDI)
+library(sf)
+
 
 # 2. Installing packages used to get corona virus data set
 
@@ -44,6 +56,8 @@ library(maps)
 #library(ncovr)
 
 ```
+
+**** Still Need to check this code - dowloads the latest version of the Corona Virus ****
 
 ```{r Loadinging and transforming most current data, include=FALSE}
 
@@ -92,15 +106,17 @@ head(ncov, 5)
 
 The second and thrid steps of data wrangling is tiding and transforming the data. The variables of the "ncovr" data set will be investigated and the nesseccary changes/transformations will be made to get the data in a tidy format.   
 
-```{r ncovr variable investigation, include=FALSE}
+```{r "ncovr" variable investigation, include=FALSE}
+
+# Note: The following code was commented out, since it was just included to show the investigation process. No changes were made to the data set. 
 
 # Steps:
 
 # 1. General structure of the data set:
 
-glimpse(ncov)
-
-structure(ncov)
+# glimpse(ncov)
+ 
+# structure(ncov)
 
 # 2. Variables that seem to have no value and should be removed.
 
@@ -120,64 +136,66 @@ structure(ncov)
 
 #3.1 Investigating "comment" variable:
 
-ncov %>%
-  filter(comment != "") %>%
-  count()
+# ncov %>%
+#   filter(comment != "") %>%
+#   count()
 
 # Conclution: Most rows (7598) have no comments in them and it 
 
 #3.2 investigating "location.ID" variable:
 
-sum(is.na(ncov$locationId))
+# sum(is.na(ncov$locationId))
 
 # Conclution: No missing values, can be useful.
 
 #3.3 Investigating "statisticsData" variable:
 
-sum(is.na(ncov$statisticsData))
+# sum(is.na(ncov$statisticsData))
 
-ncov %>%
-  filter(!is.na(ncov$statisticsData))
+# ncov %>%
+#   filter(!is.na(ncov$statisticsData))
 
-#Conclution:Contains a lot of NA values
+# Conclution:Contains a lot of NA values
 
 #3.4 Investigating "cities" variable
 
 # view first data frame in list
 
-ncov$cities[1]
+# ncov$cities[1]
 
 # Conclution: Contains a lot of NULL values. Values that are not NUll are data frames that seem to have similar but less data of than the original data set. 
 
 #3.5 Investigating "operator" variable
 
-sum(is.na(ncov$operator))
+# sum(is.na(ncov$operator))
 
-ncov %>%
-  filter(!is.na(ncov$operator))
+# ncov %>%
+#   filter(!is.na(ncov$operator))
   
 # Conclution: Don't see the use of including variable for the purpose of assignment.
 
 #3.6 Investigating "countryShortCode" variable
 
-sum(is.na(ncov$countryShortCode))
+# sum(is.na(ncov$countryShortCode))
 
 # Conclution: Contains a lot of NA's. Would Rather remove.
 
 # 3.6 Investigating "province_en" variable 
 
-sum(is.na(ncov[,23]))
+# sum(is.na(ncov[,23]))
 
-ncov %>%
-  filter(!is.na(province_en))
+# ncov %>%
+#   filter(!is.na(province_en))
 
 # Conclution: Contains a lot of NA's. Would Rather remove
 
 ```
 
-Start of code here
+***** START CODE - for reproduceability *****
 
-```{r Removing unswanted variables from ncov, echo=FALSE}
+```{r Removing unwanted variables from ncov, echo=FALSE}
+
+# Selecting only the most important variables from "ncov" data set 
 
 ncov_Updated <- ncov %>%
   select(-c("provinceName", "provinceShortName", "comment", "statisticsData", "cities", "countryName", "continentName","operator", "countryShortCode", "createTime", "modifyTime", "cityName", "province_en" ))
@@ -192,12 +210,13 @@ head(ncov_Updated,5)
 # confirmedCount = currentConfirmedCount + curedCount + deadCount
 
 # An description of the variables are as follows:
-# 1. confirmedCount: The amount of people that has/had the corona virus
-# 2. currentConfirmedCount: The number of people whom currenly (given the time and area) has the corona virus
-# 3. curedCount: The amount of people who had the corona virus
-# 4. deadCount: The number of people who died from the corona virus
 
-# But in some cases the currentConfirmedCount has a N/A value assiciated with it. This can mean that the value is uncertain. But since the other values of the expression is know, the value can be calculated.
+# 1. confirmedCount: The amount of people that has/had the corona virus.
+# 2. currentConfirmedCount: The number of people whom currenly (given the time and area) has the corona virus.
+# 3. curedCount: The amount of people who had the corona virus.
+# 4. deadCount: The number of people who died from the corona virus.
+
+# But in some cases the currentConfirmedCount has a N/A value associated with it. This can mean that the value is uncertain. But since the other values of the expression is know, the value can be calculated in the following steps.
 
 # Steps:
 
@@ -206,12 +225,12 @@ head(ncov_Updated,5)
 ncov_Updated <-  ncov_Updated %>%
   mutate(currentConfirmedCount_Complete = confirmedCount - curedCount - deadCount)
 
-# 2. Checking that the "currentConfirmedCount_Complete" equals the "currentConfirmedCount" for all cases where "currentConfirmedCount" is not NA.
+# 2. Checking that the "currentConfirmedCount_Complete" equals the "currentConfirmedCount" for all cases where "currentConfirmedCount" is not NA (testing pupose).
 
-ncov_Updated %>%
-  select(currentConfirmedCount, currentConfirmedCount_Complete) %>%
-  filter(!is.na(currentConfirmedCount)) %>%
-  filter(currentConfirmedCount != currentConfirmedCount_Complete)
+# ncov_Updated %>%
+#   select(currentConfirmedCount, currentConfirmedCount_Complete) %>%
+#   filter(!is.na(currentConfirmedCount)) %>%
+#   filter(currentConfirmedCount != currentConfirmedCount_Complete)
 
 # Therfore we can conclude that the way of estimating currentConfirmedCount_Complete is correct
 
@@ -237,9 +256,11 @@ ncov_Updated <- ncov_Updated[ ,c(9, 2, 3, 1, 4, 6, 5, 7, 8)]
 
 ```
 
+
+
 ```{r Final checking for missing values}
 
-#steps:
+# Steps:
 
 # 1. Checking which variables in data set contains missing values
 
@@ -253,42 +274,33 @@ sum(is.na(ncov_Updated$Country_Name))
 sum(is.na(ncov_Updated$Province_Name))
 sum(is.na(ncov_Updated$updateTime))
 
-# "Continent_Name", "Country_Name" and "Province_Name" seems to have missing vaues which will be probalmatic 
+# "Continent_Name", "Country_Name" and "Province_Name" seems to have missing vaues which will be probalmatic when trying to merge it with spatial data. 
 
-# 2. Filtering to see these missing values
+# 2. Investigating the "Province_Name" variable (Testing pupose)
 
-# 2.1  "Continent_Name"
+# ncov_Updated %>% 
+#   select(Continent_Name, Country_Name, Province_Name )
 
-ncov_Updated %>%
-  filter(is.na(Continent_Name))
+# Note that only most chinese provinces are listed but NOT other countries for example Newzealand province is Newzealand. This will not help in further analysis. Therefore the "Province_Name" variable will be dropped.
 
-# 2.1  "Country_name"
+# 3. Excluding "Province_Name" variable
 
-ncov_Updated %>%
-  filter(is.na(Country_Name))
+ncov_Updated <- ncov_Updated %>% 
+  select(-Province_Name)
 
-# 2.1  "Province_Name"
-
-ncov_Updated %>%
-  filter(is.na(Province_Name))
-
-
-
-ncov_Updated %>%
-  group_by(Continent_Name)%>%
-summarise(count = n())
-
-sum(is.na(ncov_Updated$Continent_Name))
-
-ncov_Updated %>%
+# The following code chunks will try and populate values for the NA instances in the "Continet_Name" and "Country_Name" variable.
 
 ```
 
-```{r correcting missing values}
+Correcting NA's found in *Continent_Name*
+
+```{r Correcting missing values found in "Continent_Name"}
+
+# By using the data provided, the continent names can that have NA instances can be removed.
 
 # Steps: 
 
-# 1.  Creating  completed data frame with the countries and their associated contitnents 
+# 1.  Creating  completed data frame with the countries and their associated continents
 
 Continent_Country_df <- ncov_Updated %>%
   group_by(Continent_Name, Country_Name) %>%
@@ -306,42 +318,208 @@ Continent_Country_df <-  rbind(Continent_Country_df, Na_Entry) %>%
 
 # 2. Using the created data frame to fill in for the missing values of the original data frame.
 
-# 2.1 Joining by continent first
 
-Test_df <-  left_join(ncov_Updated, Continent_Country_df, by = "Country_Name" )
+ncov_Updated <-  left_join(ncov_Updated, Continent_Country_df, by = "Country_Name" )
 
-Replace_df <- Test_df %>%
-  filter(is.na(Continent_NEW_Name)) %>%
-  select(Continent_Name) 
+# Note: The missing values in "Continent_Name"  previously encoutered are gone, but there are still missing values in the new variable "Continen_NEW_name". This is Because the two data frames were joined by the variables "Country_Name" which also contained some missing values.   
 
-# Replacing NA values
+# 3. By using the original "Country_Name" and the new "Country_NEW_Name" the missing values in Country_NEW_Name can be completely removed. This is done by the following for loop:  
 
-# Basic coding 
-
-for(i in 1:nrow(Test_df)) {
+for(i in 1:nrow(ncov_Updated)) {
   
-  if (is.na(Test_df$Continent_NEW_Name[i])) {
-    Test_df$Continent_NEW_Name[i] = Test_df$Continent_Name[i] 
+  if (is.na(ncov_Updated$Continent_NEW_Name[i])) {
+    ncov_Updated$Continent_NEW_Name[i] = ncov_Updated$Continent_Name[i] 
   }
   
 }
   
-sum(is.na(Test_df$Continent_NEW_Name))
+# 4. Checking for missing values in the new complete variable "Continent_NEW_Name"
 
-Test_df %>%
+ncov_Updated %>%
  filter(is.na(Continent_NEW_Name))
+
+# Note: As seen by the filter result there are only two obseravations that report missing values. 
+
+# 5. Filtering by "location_ID" to see if the values are uniques or if they have Continents or countries associated with them
+
+ncov_Updated %>%
+filter(Location_ID == 955019)
+
+# Note: Asia is associated with the values
+
+# 7. Final updating of values
+
+ncov_Updated$Continent_NEW_Name[ncov_Updated$Location_ID == 955019] <- "Asia"
+
+# 8. Removing old "Continent_Name" 
+
+ncov_Updated <- ncov_Updated %>%
+  select(-Continent_Name)
+
+
 ```
 
+Correcting NA's found in *Country_Name*
+
+``` {r Correcting missing values found in "Country_Name" variable}
+
+# Steps
+
+# 1. Checking wich codes do not have countries associated with them
+
+ncov_Updated %>%
+  filter(is.na(Country_Name)) %>%
+  group_by(Location_ID)  %>%
+  summarise(Count = n())
+
+# Note: only 5 codes do not have country names (i.e.NA's)
+
+# 2. Investigating the country codes with no country names (Testing purpose)
+
+# Note: The original data set (ncov) was used because it was realised that there where chinese names associated with the codes where the engilsh country names were unknown. Google translate was used to determine the english country names of the 5 location_Id.   
+
+# 2.1 location_ID = 955019
+
+# Country_55019 <- ncov %>%
+#   filter(locationId == 955019)
+
+# Conclution: counrty is United Arab Emirates (Asia)
+
+# 2.2 location_ID = 965002
+
+# Country_965002 <- ncov %>%
+#   filter(locationId == 965002)
+
+# Conclution: Country is Andorra (Europe)
+
+# 2.3 location_ID = 965005 
+
+# Country_965005 <- ncov %>%
+#   filter(locationId == 965005)
+
+# Conclution: Country is Croatia (Europe)
+
+# 2.4 location_ID = 974006 
+
+# Country_974006 <- ncov %>%
+#   filter(locationId == 974006)
+
+# Conclution: Country is Dominica (North America)
+
+# 2.5 location_ID = 0
+
+# There are two "countries" using the code 0  - Europe and Others
+
+# 2.5.1) 
+# Country_0_Europe <- ncov %>%
+# filter(locationId == 0 & continentEnglishName == "Europe")
+
+# Conclution: country is North Macedonia (Europe)
+
+# 2.5.2) 
+# Country_0_Cruise <- ncov %>%
+#   filter(locationId == 0 & continentEnglishName == "Others")
+
+# Diamond Princess Cruises - not really a country (Others)
+
+# 3) Populating the countries that NA values according to their code
+
+ncov_Updated$Country_Name[ncov_Updated$Location_ID == 955019] <- "United Arab Emirates"
+
+ncov_Updated$Country_Name[ncov_Updated$Location_ID == 965002] <- "Andorra"
+
+ncov_Updated$Country_Name[ncov_Updated$Location_ID == 965005] <- "Croatia"
+
+ncov_Updated$Country_Name[ncov_Updated$Location_ID == 974006] <- "Dominica"
+
+ncov_Updated$Country_Name[ncov_Updated$Location_ID == 0 & ncov_Updated$Continent_NEW_Name == "Europe"] <- "North Macedonia"
+
+ncov_Updated$Country_Name[ncov_Updated$Location_ID == 0 & ncov_Updated$Continent_NEW_Name == "Others"] <- "Other"
+
+```
+
+```{r Renaming and rearanging the complete columns}
+
+# Renaming the completed continent and country variables 
+
+ncov_Updated <- ncov_Updated %>%
+  rename(Continent_Name_Comp = Continent_NEW_Name,
+         Country_Name_Comp = Country_Name)
+
+ncov_Updated <- ncov_Updated[ ,c(1, 2, 3, 4, 5, 8, 6, 7)]
+
+```
+
+Merging the "ncov_Updated" data set with a spatial data set.
 
 ```{r leaflet testing}
-world_map <- map(database = "world", plot = FALSE, fill = TRUE)
 
-leaflet()  %>%
-  addProviderTiles(providers$Thunderforest.Transport) %>%
-  setView(lng = 116.363625  , lat = 39.913818, zoom = 4) %>%
-  addCircles(lng = 116.363625  , lat = 39.913818 )
+# 1. Adding world spacial information 
+World_Countries <- geojson_read("countries.geojson", what = "sp")
+
+World_countries_df <-  World_Countries@data
+
+leaflet(World_Countries)  %>%
+  #addProviderTiles(providers$Esri.WorldGrayCanvas) %>%
+  addPolygons(stroke = FALSE, color = "White", weight = "1", smoothFactor = 0.3,
+               fillOpacity = 0.7, fillColor = "lightblue")
+
+# 2. Does not work 
+
+World_countries_2 <- readOGR(dsn ="C:/Users/Gustav/Desktop/MSc Data Science 1st year/Exploratory data analysis/Assignments/Assignment4", layer = "gadm36", verbose = FALSE)
+
+
+rm(World_countries_2)
+
+# 3. .
+
+Continents_Data <-  readOGR(dsn = "C:/Users/Gustav/Desktop/MSc Data Science 1st year/Exploratory data analysis/Assignments/Assignment4", layer = "continents", verbose = FALSE )
+ 
+Continents_df <- Continents_Data@data
+
 
 ```
+
+```{r Getting country data from world bank data }
+
+#steos
+
+# 1. Searchin WDI data base
+
+WDIsearch(string = "GDP",
+          field = "name",
+          short = FALSE)
+
+# 2. Retriving data
+
+WDI_df <- data.frame( 
+  WDI(country = "all",
+  start = 2018,
+  end = 2018,
+  extra = TRUE
+  )
+)
+
+# Extracting only useful infromation from dataframe
+
+Complete_Country_Continent_df <-  WDI_df %>%
+  select(iso3c, country, region) %>%
+  filter(region != "Aggregates") %>%
+  group_by(region) %>%
+  summarise(count = n())
+
+
+
+
+
+
+
+
+
+
+
+```
+
 
 \section{Visualisations}
 
@@ -356,6 +534,7 @@ hist(x)
 
 
 ```
+
 
 \pagebreak
 
