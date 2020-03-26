@@ -35,8 +35,19 @@ knitr::opts_chunk$set(echo = TRUE)
 #install.packages("spdplyr")
 #install.packages("WDI")
 #install.packages("sf")
+#install.packages("countrycode")
+#install.packages("revgeo")
+#install.packages("ggmap")
+#install.packages("rnaturalearth")
+#install.packages("rnaturalearthdata")
+install.packages("gganimate")
+install.packages("mapdata")
+install.packages("devtools")
+install.packages("Rtools")
+devtools::install_github("thomasp85/gganimate/releases/tag/v0.1.1", force = TRUE)
 
-
+library(Rtools)
+library(devtools)
 library(tidyverse)
 library(remotes)
 library(plotly)
@@ -47,41 +58,61 @@ library(rgdal)
 library(spdplyr)
 library(WDI)
 library(sf)
-
-
+library(countrycode)
+library(revgeo)
+library(ggmap)
+library(rnaturalearth)
+library(rnaturalearthdata)
+library(rnaturalearthhires)
+library(gganimate)
+library(mapdata)
 # 2. Installing packages used to get corona virus data set
 
 #remotes::install_github('pzhaonet/ncovr')
 #install.packages("ncovr")
 #library(ncovr)
 
+
+
+
+
 ```
 
 **** Still Need to check this code - dowloads the latest version of the Corona Virus ****
 
 ```{r Loadinging and transforming most current data, include=FALSE}
+#### Does not WORk
 
-###### CODE DOES NOT WORK ######
-# 
-# # Note: Only run the following chunk if the latest conona data wants to be obtained:
-# 
-# # Run the following command to get the latest data
-# ncov <- get_ncov()
-# 
-# # To only extract the "area" data frame
-# ncov <- ncov$area
-# 
-# # a function for converting Julian time to ymd_
-# conv_time <- function(x){
-#   as.POSIXct('1970-01-01', tz = 'GMT') + x / 1000
-# }
-# 
-# # convert updateTime from Julian date to ymd-hms
-# ncov$updateTime <- conv_time(ncov$updateTime)
-# 
-# 
-# # Will save the latest data 
-# save(ncov, file = "ncov-latest.Rdata")
+# Helper file to download the latest coronavirus data using the ncovr R package 
+# see https://github.com/pzhaonet/ncovr for more details.
+
+### ONLY DO THIS ONCE
+# you need the remotes packages for this, install if you don't have
+# install.packages("remotes")
+# get the ncovr package
+remotes::install_github('pzhaonet/ncovr')
+###
+
+### Get the latest data
+
+# load required packages
+library(ncovr)
+
+# get the latest data
+ncov <- get_ncov() 
+
+# extract the area data frame, which contains everything we need
+ncov <- ncov$area
+
+# a function for converting Julian time to ymd_
+conv_time <- function(x){
+  as.POSIXct('1970-01-01', tz = 'GMT') + x / 1000
+}
+
+# convert updateTime from Julian date to ymd-hms
+ncov$updateTime <- conv_time(ncov$updateTime)
+
+save(ncov, file = "ncov-latest.Rdata")
 
 ```
 
@@ -509,6 +540,419 @@ Complete_Country_Continent_df <-  WDI_df %>%
   summarise(count = n())
 
 
+```
+
+***** NEW DATA SET *****
+
+```{r Loading new ncov data}
+
+
+# Loading latest data (not going to be used for analysis)
+
+# ncov_new <- read.csv("https://raw.githubusercontent.com/datasets/covid-19/master/data/time-series-19-covid-combined.csv")
+
+# Loading the data up to the 23/03/2020
+
+# For reproduceability
+
+rm(ncov_new)
+
+ncov_new <- read.csv(file = "time_series_19_covid_combined_23_03_2020.csv", stringsAsFactors = FALSE)
+
+
+```
+
+```{r Investigating variables in data sets}
+
+# Steps
+
+# 1. Investigating type and structre of data
+
+glimpse(ncov_new)
+
+str(ncov_new)
+
+# Remark: The "Date" variable should of type date not factor:
+
+
+# 2. Checking for NA values in data set
+
+sum(is.na(ncov_new$Province.State))
+sum(is.na(ncov_new$Country.Region))
+sum(is.na(ncov_new$Lat))
+sum(is.na(ncov_new$Long))
+sum(is.na(ncov_new$Date))
+sum(is.na(ncov_new$Confirmed))
+sum(is.na(ncov_new$Recovered))
+sum(is.na(ncov_new$Deaths))
+
+# Remark: Seems as if there is only missing values in the "Recovered" variable
+
+# 3. Looking at missing value instances
+
+ncov_new %>% 
+  filter(is.na(Recovered))
+
+# Replace NA values with 0
+
+ncov_new$Recovered[is.na(ncov_new$Recovered)] <- 0
+
+ncov_new %>% 
+  filter(is.na(Recovered))
+
+```
+
+```{r additions and transformations to data set}
+
+# 1. Changing the format of the "Date" variable
+
+ncov_new$Date <- as.Date(ncov_new$Date,)
+
+# 2. Adding a variable "Infected" which is the number of accounts of people that are still undergoing treatment.
+
+ncov_new <- ncov_new %>% 
+  mutate(Infected = Confirmed - Recovered - Deaths)
+
+
+# 3. Renaming some of the variables to make it more intuitive
+
+ncov_new <- ncov_new %>% 
+  rename(Cum_Confirmed = Confirmed,
+         Province_State = Province.State,
+         Country_Region = Country.Region)
+
+```
+
+```{r Loading spatial data and transfrorming to geojson format}
+
+# Steps:
+
+# 1. Reading in shape file dowloaded from  the natural earth data - http://www.naturalearthdata.com/downloads/
+
+Spatial_df <- readOGR(dsn = "C:/Users/Gustav/Desktop/MSc Data Science 1st year/Exploratory data analysis/Assignments/Assignment4", layer =  "ne_10m_admin_1_states_provinces", verbose = FALSE )
+
+# 2. Converting SP data frame to geojson format
+
+Spatial_df_geojson <- geojson_json(Spatial_df)
+
+# Saving the geojson file to local file library
+
+geojson_write(Spatial_df_geojson, file = "C:/Users/Gustav/Desktop/MSc Data Science 1st year/Exploratory data analysis/Assignments/Assignment4/Countries_States.geojson")
+
+```
+
+```{r joing data frames}
+
+
+# The following code will join the data of the ncov_new data frame with the Spatial data frame
+
+# Steps
+
+
+# 1. Look at the data of the spacial data (To do test merge)
+
+Spatial_data_df <- Spatial_df@data
+
+# 2. Decide on variables that seem important in spatial data frame
+
+# Variables that seem important are:
+
+# 1. "name": seems to be the province/area/State name (just for add. info)
+
+# 2. "type_en" : Seems to describe the type of region (just for add. info)
+
+# 3. "mapcolor9" : Seems to colour the regions maybe by continents
+
+# 4. "mapcolor13": Seems to colour the regions maybe by continents
+
+# 5. "latitude": Latitude of location (NB)
+
+# 6. "longitude": Longitude of location (NB)
+
+# 7. "admin": Seems to be the countries name (NB)
+
+ncov_Updated
+
+Test_df <- revgeo(latitude = -32.0275, longitude = -59.2824, provider = "google", item = "country", API = "AIzaSyDAlBCwDDrYdTD2OT17X8BjwvlmwxG_PdU")
+
+
+filter(ncov_new, Country_Region == "Thailand"  )
+
+filter(Spatial_data_df, admin == "Thailand")
+
+# Revese geocoding
+
+
+     
+
+```
+
+```{r Tut - Spatial mapping in R}
+
+# 1. Basics
+
+# 1.1 Loading the world data
+
+World <- ne_countries(scale = "medium", returnclass = "sf")
+
+class(World)
+
+# 1.2 Basic plot of data
+
+ggplot(data = World) +
+    geom_sf(color = "black", fill = "lightblue" )
+
+# Note: color refers to line color and fill to the fill of the polygons
+
+st_crs(World)
+
+# 1.3 Labeling the map
+
+World_points <- st_centroid(World)
+World_points <- cbind(World, st_coordinates(st_centroid(World$geometry)))
+
+ggplot(data = World) +
+  geom_sf() +
+  geom_text(data = World_points, aes(x=X, y=Y, label=name),
+   color = "darkblue", fontface = "bold", check_overlap = FALSE) +
+  annotate(geom = "text", x = -90, y = 26, label = "Gulf of Mexico", 
+   fontface = "italic", color = "grey22", size = 6) +
+  coord_sf(xlim = c(-102.15, -74.12), ylim = c(7.65, 33.97), expand = FALSE)
+
+# 2. Additional layers
+
+```
+
+
+```{r Merging of Spatial data and ncov_new data}
+
+# Note: The "Country_Region" variable will be used to join the spatial data frame (obtained by the rnaturalearth packages) and the ncov_new data frame. Therfore, additional features will be added to the geometries.  
+
+# Steps
+
+# 1. Testing to see which country names do NOT coincide between the two data frames.
+
+# 1.1 Creating a data frame (World_df) that list all the countries of the natural earth data.
+
+World_df <- data.frame( Country_Region = World$name_long,
+                        Pop_Estimate = World$pop_est
+)
+
+
+# 1.2 Joining the ncov_new data frame with the World_df date frame to investigate cases where Pop_Estimate is NA (i.e there is a mis match in country names and the join cannot be complete)
+
+
+Country_Test_df <- left_join(ncov_new, World_df, by = "Country_Region" )
+
+sum(is.na(Country_Test_df$Pop_Estimate))
+
+# Remark: There is NA present. These country names that cause this should be investigated
+
+# 1.3 Investigation of the cuntries that present NA values
+
+ Mismatch_Countries <- filter(Country_Test_df, is.na(Pop_Estimate)) %>%
+  group_by(Country_Region) %>%
+  summarise(count = n())
+
+ # Remark: Luckily, there is only 15 counties that does not cooincide. These countries will be manually renamed so that they can be merged successfully.  
+ 
+# 1.4  Change the following names of the ncov_new data set.
+
+# 1. Brunei -> Brunei Darussalam 
+# 2. Congo (Brazzaville) -> Republic of the Congo
+# 3. Congo (Kinshasa) -> Democratic Republic of the Congo
+# 4. Cote d'Ivoire -> Côte d'Ivoire 
+# 5. Cruise Ship -> Japan 
+# 6. Czechia -> Czech Republic 
+# 7. Eswatini -> eSwati
+# 8. Gambia, The ->The Gambia
+# 9. Holy See -> Vatican 
+# 10. Korea, South -> Republic of Korea 
+# 11. North Macedonia -> Macedonia 
+# 12. Russia -> Russian Federation 
+# 13. Taiwan* -> Taiwan 
+# 14. US -> United States 
+# 15. Cabo Verde -> Republic of Cabo Verde 
+
+ncov_new$Country_Region[ncov_new$Country_Region == "Brunei"] <- "Brunei Darussalam"
+
+ncov_new$Country_Region[ncov_new$Country_Region == "Congo (Brazzaville)"] <- "Republic of the Congo"
+
+ncov_new$Country_Region[ncov_new$Country_Region == "Congo (Kinshasa)"] <- "Democratic Republic of the Congo"
+
+ncov_new$Country_Region[ncov_new$Country_Region == "Cote d'Ivoire"] <- "Côte d'Ivoire"
+
+ncov_new$Country_Region[ncov_new$Country_Region == "Cruise Ship"] <- "Japan"
+
+ncov_new$Country_Region[ncov_new$Country_Region == "Czechia"] <- "Czech Republic"
+
+ncov_new$Country_Region[ncov_new$Country_Region == "Eswatini"] <- "eSwatini"
+
+ncov_new$Country_Region[ncov_new$Country_Region == "Gambia"] <- "The Gambia"
+
+ncov_new$Country_Region[ncov_new$Country_Region == "Holy See"] <- "Vatican"
+
+ncov_new$Country_Region[ncov_new$Country_Region == "Korea, South"] <- "Republic of Korea"
+
+ncov_new$Country_Region[ncov_new$Country_Region == "Russia"] <- "Russian Federation"
+
+ncov_new$Country_Region[ncov_new$Country_Region == "US"] <- "United States"
+
+ncov_new$Country_Region[ncov_new$Country_Region == "Cabo Verde"] <- "Republic of Cabo Verde"
+
+ncov_new$Country_Region[ncov_new$Country_Region == "North Macedonia"] <- "Macedonia"
+
+ncov_new$Country_Region[ncov_new$Country_Region == "Taiwan*"] <- "Taiwan" 
+
+
+# 1.5 Re-joining the Country_Test_df with changed country names
+
+Country_Test_df <- left_join(ncov_new, World_df, by = "Country_Region" )
+
+sum(is.na(Country_Test_df$Pop_Estimate))
+
+
+# Remark: There are no missing values, therefore ALL the contries names of the ncov_new data set and the spatial data set coincides and the ACTUAL merging of features can continue.
+
+
+# 2. Actual merging of spatial data (World) and ncov_new
+
+# 2.1 Selcting only important features from the world data set and storing in World_Merge_df
+
+World_Merge_df <- World %>% 
+  select(name_long, iso_a3) %>%
+  rename(Country_Region  = name_long)
+
+# 2.2 Final megrge 
+
+ncov_new_Spatial <- left_join(World_Merge_df, ncov_new, by = "Country_Region")
+
+class(ncov_new_Spatial)
+
+# 2.3 Changing the class of the new created df to be a data frame as well as sf
+
+st_geometry(ncov_new_Spatial) <- ncov_new_Spatial$geometry
+
+class(ncov_new_Spatial)
+
+```
+
+```{r additional changes to new created spatial data frame}
+
+# The goal of this section is to remove and change some variables of the ncov_new_Spatial data frame
+
+
+# Steps:
+
+
+# 1. Remove "Province_State" variable (since it will not be used in the analysis)
+
+ncov_new_Spatial <- ncov_new_Spatial %>%
+  select()
+
+
+glimpse(ncov_new_Spatial)
+
+
+attr(ncov_new_Spatial, "sf_column")
+
+
+```
+
+
+
+```{r FINAL Spatial data Merging operation}
+
+# The following code chunk deals with creating a data frame that contains the nessecceray data that will be used to create plots on a wolrd map.
+
+
+# Steps:
+
+# 1. Creating the data frame that encapsulates all the data needed for creating animation. The data frame basically gives a count summary of each country in the data set per day (from 2020-01-22 to 2020-03-23) 
+
+
+ncov_new_FINAL_data <-  ncov_new %>% 
+  group_by(Date, Country_Region) %>% 
+  summarise(Cum_Confirmed_Country = sum(Cum_Confirmed),
+            Recovered_Country = sum(Recovered),
+            Deaths_Country = sum(Deaths),
+            Infected_Country = sum(Infected)) %>% 
+  as.data.frame()
+
+class(ncov_new_FINAL_data)
+
+# 1.1 Changing Some variables that are type double to integer
+ 
+ncov_new_FINAL_data$Recovered_Country <- as.integer(ncov_new_FINAL_data$Recovered_Country)
+ncov_new_FINAL_data$Infected_Country <- as.integer(ncov_new_FINAL_data$Infected_Country)
+
+
+# 2. Merging of data with Spatial data from the natureal earth packages
+
+ncov_new_Spatial <- left_join(ncov_new_FINAL_data, World_Merge_df , by = "Country_Region")
+
+# 2.1 Classifying the geometry feature in data frame
+
+st_geometry(ncov_new_Spatial) <- ncov_new_Spatial$geometry
+
+
+
+```
+
+```{r plot testing}
+
+
+
+
+Test_df <- ncov_new_Spatial %>% 
+  filter(Date == "2020-03-23")
+
+
+ Map <- ggplot()  +
+   geom_sf(data = ncov_new_Spatial, aes(frame = Date, fill = Cum_Confirmed_Country)) + 
+   coord_sf(xlim = c(-30, 55), ylim = c(-40, 40), expand = FALSE) +
+    scale_fill_gradient(low="blue", high="red", trans = "log10")
+   
+ 
+Map
+
+ggplotly(Map)
+ 
+ Map + transition_manual(Date)  +
+  labs(title = "Date: {current_frame}")
+ 
+
+animate(Map)
+
+Map$labels
+
+
+```
+
+
+
+
+
+
+```{r leaflet testing with new data}
+
+Spatial_df <- readOGR("Countries_States.geojson")
+
+
+leaflet(ncov_new)  %>%
+  addProviderTiles(providers$Esri.NatGeoWorldMap) %>%
+  addMarkers(lat = 35.4437	 , lng = 139.638 )
+
+
+```
+
+
+```{r Using R maps}
+
+Map_World <- map_data("world2Hires")
+
+ggplot() + 
+  geom_polygon(data = Map_World, aes(x = long, y = lat, group = group ))
 
 
 
@@ -519,6 +963,8 @@ Complete_Country_Continent_df <-  WDI_df %>%
 
 
 ```
+
+
 
 
 \section{Visualisations}
