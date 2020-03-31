@@ -40,13 +40,22 @@ knitr::opts_chunk$set(echo = TRUE)
 #install.packages("ggmap")
 #install.packages("rnaturalearth")
 #install.packages("rnaturalearthdata")
-install.packages("gganimate")
-install.packages("mapdata")
-install.packages("devtools")
-install.packages("Rtools")
-devtools::install_github("thomasp85/gganimate/releases/tag/v0.1.1", force = TRUE)
+#install.packages("gganimate")
+#install.packages("mapdata")
+#install.packages("devtools")
+#install.packages("Rtools")
+#devtools::install_github("thomasp85/gganimate/releases/tag/v0.1.1", force = TRUE)
+# install.packages("gifski")
+# install.packages("cowplot")
+# install.packages("gridExtra")
+# install.packages("magick")
+install.packages("caTools")
 
-library(Rtools)
+library(caTools)
+library(magick)
+library(gridExtra)
+library(cowplot)
+library(gifski)
 library(devtools)
 library(tidyverse)
 library(remotes)
@@ -66,55 +75,16 @@ library(rnaturalearthdata)
 library(rnaturalearthhires)
 library(gganimate)
 library(mapdata)
+
+
 # 2. Installing packages used to get corona virus data set
 
 #remotes::install_github('pzhaonet/ncovr')
 #install.packages("ncovr")
 #library(ncovr)
 
-
-
-
-
 ```
 
-**** Still Need to check this code - dowloads the latest version of the Corona Virus ****
-
-```{r Loadinging and transforming most current data, include=FALSE}
-#### Does not WORk
-
-# Helper file to download the latest coronavirus data using the ncovr R package 
-# see https://github.com/pzhaonet/ncovr for more details.
-
-### ONLY DO THIS ONCE
-# you need the remotes packages for this, install if you don't have
-# install.packages("remotes")
-# get the ncovr package
-remotes::install_github('pzhaonet/ncovr')
-###
-
-### Get the latest data
-
-# load required packages
-library(ncovr)
-
-# get the latest data
-ncov <- get_ncov() 
-
-# extract the area data frame, which contains everything we need
-ncov <- ncov$area
-
-# a function for converting Julian time to ymd_
-conv_time <- function(x){
-  as.POSIXct('1970-01-01', tz = 'GMT') + x / 1000
-}
-
-# convert updateTime from Julian date to ymd-hms
-ncov$updateTime <- conv_time(ncov$updateTime)
-
-save(ncov, file = "ncov-latest.Rdata")
-
-```
 
 \section{Data wrangling} \label{DW section}
 
@@ -123,429 +93,10 @@ The data wrangling consist of importing, tidying and transforming the data set [
 \subsection{Imporing data} 
 
 As mentioned in section \ref{DW section} the first step of data wrangling is importing the data.
-```{r importing data, echo=FALSE}
-
-# Importing the data set "ncov"
-
-load("C:/Users/Gustav/Desktop/MSc Data Science 1st year/Exploratory data analysis/Assignments/Assignment4/ncov-latest (1).Rdata")
-
-head(ncov, 5)
-
-```  
-
-\subsection{Tiding and transforming the data}
-
-The second and thrid steps of data wrangling is tiding and transforming the data. The variables of the "ncovr" data set will be investigated and the nesseccary changes/transformations will be made to get the data in a tidy format.   
-
-```{r "ncovr" variable investigation, include=FALSE}
-
-# Note: The following code was commented out, since it was just included to show the investigation process. No changes were made to the data set. 
-
-# Steps:
-
-# 1. General structure of the data set:
-
-# glimpse(ncov)
- 
-# structure(ncov)
-
-# 2. Variables that seem to have no value and should be removed.
-
-# provinceName: Chinese writings - no use
-# provinceShortName: Chinese writings - no use
-# comment: Chinese writings - no use
-# statisticsData: Contains a lot of NA's. Cant see the use in variable that gives link.
-# cities: Contains a lot of NULL values that are useless.
-# countryName: Chinese writings - no use
-# continentName:Chinese writings - no use
-# operator: No use for assignment
-# countryShortCode: Contains a lot of NA's. Would Rather remove.
-# createTime: Contains a lot of NA's and dont know meaning
-# modifyTime: Contains a lot of NA's and dont know meaning 
-# cityName: Contains no names and NA's
-# province_en: Contains no names and NA's 
-
-#3.1 Investigating "comment" variable:
-
-# ncov %>%
-#   filter(comment != "") %>%
-#   count()
-
-# Conclution: Most rows (7598) have no comments in them and it 
-
-#3.2 investigating "location.ID" variable:
-
-# sum(is.na(ncov$locationId))
-
-# Conclution: No missing values, can be useful.
-
-#3.3 Investigating "statisticsData" variable:
-
-# sum(is.na(ncov$statisticsData))
-
-# ncov %>%
-#   filter(!is.na(ncov$statisticsData))
-
-# Conclution:Contains a lot of NA values
-
-#3.4 Investigating "cities" variable
-
-# view first data frame in list
-
-# ncov$cities[1]
-
-# Conclution: Contains a lot of NULL values. Values that are not NUll are data frames that seem to have similar but less data of than the original data set. 
-
-#3.5 Investigating "operator" variable
-
-# sum(is.na(ncov$operator))
-
-# ncov %>%
-#   filter(!is.na(ncov$operator))
-  
-# Conclution: Don't see the use of including variable for the purpose of assignment.
-
-#3.6 Investigating "countryShortCode" variable
-
-# sum(is.na(ncov$countryShortCode))
-
-# Conclution: Contains a lot of NA's. Would Rather remove.
-
-# 3.6 Investigating "province_en" variable 
-
-# sum(is.na(ncov[,23]))
-
-# ncov %>%
-#   filter(!is.na(province_en))
-
-# Conclution: Contains a lot of NA's. Would Rather remove
-
-```
 
 ***** START CODE - for reproduceability *****
 
-```{r Removing unwanted variables from ncov, echo=FALSE}
-
-# Selecting only the most important variables from "ncov" data set 
-
-ncov_Updated <- ncov %>%
-  select(-c("provinceName", "provinceShortName", "comment", "statisticsData", "cities", "countryName", "continentName","operator", "countryShortCode", "createTime", "modifyTime", "cityName", "province_en" ))
-
-head(ncov_Updated,5)
-```
-
-```{r confirming data values}
-
-# According to the author the following should be true:
-
-# confirmedCount = currentConfirmedCount + curedCount + deadCount
-
-# An description of the variables are as follows:
-
-# 1. confirmedCount: The amount of people that has/had the corona virus.
-# 2. currentConfirmedCount: The number of people whom currenly (given the time and area) has the corona virus.
-# 3. curedCount: The amount of people who had the corona virus.
-# 4. deadCount: The number of people who died from the corona virus.
-
-# But in some cases the currentConfirmedCount has a N/A value associated with it. This can mean that the value is uncertain. But since the other values of the expression is know, the value can be calculated in the following steps.
-
-# Steps:
-
-# 1. Creating new variable "currentConfirmedCount_Complete" and removing o
-
-ncov_Updated <-  ncov_Updated %>%
-  mutate(currentConfirmedCount_Complete = confirmedCount - curedCount - deadCount)
-
-# 2. Checking that the "currentConfirmedCount_Complete" equals the "currentConfirmedCount" for all cases where "currentConfirmedCount" is not NA (testing pupose).
-
-# ncov_Updated %>%
-#   select(currentConfirmedCount, currentConfirmedCount_Complete) %>%
-#   filter(!is.na(currentConfirmedCount)) %>%
-#   filter(currentConfirmedCount != currentConfirmedCount_Complete)
-
-# Therfore we can conclude that the way of estimating currentConfirmedCount_Complete is correct
-
-# 3. Removing the currentConfirmedCount
-
-ncov_Updated <- ncov_Updated %>%
-  select(-c("currentConfirmedCount"))
-
-# 4. Since "suspectedCount" + "curedCount" + "deadCount" does not = "confirmedCount", it seems that the variable has a lot of uncertainty attached to it. Therefore it will be excluded from the analysis.
-
-ncov_Updated <- ncov_Updated %>%
-  select(-c("suspectedCount"))
-
-# 5. Renaming and rearranging some of the variables
-
-ncov_Updated <- ncov_Updated %>%
-  rename( Country_Name = countryEnglishName,
-          Continent_Name = continentEnglishName,
-          Province_Name = provinceEnglishName,
-          Location_ID = locationId)
-
-ncov_Updated <- ncov_Updated[ ,c(9, 2, 3, 1, 4, 6, 5, 7, 8)] 
-
-```
-
-
-
-```{r Final checking for missing values}
-
-# Steps:
-
-# 1. Checking which variables in data set contains missing values
-
-sum(is.na(ncov_Updated$currentConfirmedCount_Complete))
-sum(is.na(ncov_Updated$curedCount))
-sum(is.na(ncov_Updated$deadCount))
-sum(is.na(ncov_Updated$confirmedCount))
-sum(is.na(ncov_Updated$Location_ID))
-sum(is.na(ncov_Updated$Continent_Name))
-sum(is.na(ncov_Updated$Country_Name))
-sum(is.na(ncov_Updated$Province_Name))
-sum(is.na(ncov_Updated$updateTime))
-
-# "Continent_Name", "Country_Name" and "Province_Name" seems to have missing vaues which will be probalmatic when trying to merge it with spatial data. 
-
-# 2. Investigating the "Province_Name" variable (Testing pupose)
-
-# ncov_Updated %>% 
-#   select(Continent_Name, Country_Name, Province_Name )
-
-# Note that only most chinese provinces are listed but NOT other countries for example Newzealand province is Newzealand. This will not help in further analysis. Therefore the "Province_Name" variable will be dropped.
-
-# 3. Excluding "Province_Name" variable
-
-ncov_Updated <- ncov_Updated %>% 
-  select(-Province_Name)
-
-# The following code chunks will try and populate values for the NA instances in the "Continet_Name" and "Country_Name" variable.
-
-```
-
-Correcting NA's found in *Continent_Name*
-
-```{r Correcting missing values found in "Continent_Name"}
-
-# By using the data provided, the continent names can that have NA instances can be removed.
-
-# Steps: 
-
-# 1.  Creating  completed data frame with the countries and their associated continents
-
-Continent_Country_df <- ncov_Updated %>%
-  group_by(Continent_Name, Country_Name) %>%
-  summarise(count = n()) %>%
-  na.omit() %>%
-  select(Country_Name, Continent_Name) %>%
-  as.data.frame()
-
-Na_Entry <- data.frame(Country_Name =  NA,
-                       Continent_Name = NA)
-
-Continent_Country_df <-  rbind(Continent_Country_df, Na_Entry) %>%
-  rename(Continent_NEW_Name = Continent_Name)
-
-
-# 2. Using the created data frame to fill in for the missing values of the original data frame.
-
-
-ncov_Updated <-  left_join(ncov_Updated, Continent_Country_df, by = "Country_Name" )
-
-# Note: The missing values in "Continent_Name"  previously encoutered are gone, but there are still missing values in the new variable "Continen_NEW_name". This is Because the two data frames were joined by the variables "Country_Name" which also contained some missing values.   
-
-# 3. By using the original "Country_Name" and the new "Country_NEW_Name" the missing values in Country_NEW_Name can be completely removed. This is done by the following for loop:  
-
-for(i in 1:nrow(ncov_Updated)) {
-  
-  if (is.na(ncov_Updated$Continent_NEW_Name[i])) {
-    ncov_Updated$Continent_NEW_Name[i] = ncov_Updated$Continent_Name[i] 
-  }
-  
-}
-  
-# 4. Checking for missing values in the new complete variable "Continent_NEW_Name"
-
-ncov_Updated %>%
- filter(is.na(Continent_NEW_Name))
-
-# Note: As seen by the filter result there are only two obseravations that report missing values. 
-
-# 5. Filtering by "location_ID" to see if the values are uniques or if they have Continents or countries associated with them
-
-ncov_Updated %>%
-filter(Location_ID == 955019)
-
-# Note: Asia is associated with the values
-
-# 7. Final updating of values
-
-ncov_Updated$Continent_NEW_Name[ncov_Updated$Location_ID == 955019] <- "Asia"
-
-# 8. Removing old "Continent_Name" 
-
-ncov_Updated <- ncov_Updated %>%
-  select(-Continent_Name)
-
-
-```
-
-Correcting NA's found in *Country_Name*
-
-``` {r Correcting missing values found in "Country_Name" variable}
-
-# Steps
-
-# 1. Checking wich codes do not have countries associated with them
-
-ncov_Updated %>%
-  filter(is.na(Country_Name)) %>%
-  group_by(Location_ID)  %>%
-  summarise(Count = n())
-
-# Note: only 5 codes do not have country names (i.e.NA's)
-
-# 2. Investigating the country codes with no country names (Testing purpose)
-
-# Note: The original data set (ncov) was used because it was realised that there where chinese names associated with the codes where the engilsh country names were unknown. Google translate was used to determine the english country names of the 5 location_Id.   
-
-# 2.1 location_ID = 955019
-
-# Country_55019 <- ncov %>%
-#   filter(locationId == 955019)
-
-# Conclution: counrty is United Arab Emirates (Asia)
-
-# 2.2 location_ID = 965002
-
-# Country_965002 <- ncov %>%
-#   filter(locationId == 965002)
-
-# Conclution: Country is Andorra (Europe)
-
-# 2.3 location_ID = 965005 
-
-# Country_965005 <- ncov %>%
-#   filter(locationId == 965005)
-
-# Conclution: Country is Croatia (Europe)
-
-# 2.4 location_ID = 974006 
-
-# Country_974006 <- ncov %>%
-#   filter(locationId == 974006)
-
-# Conclution: Country is Dominica (North America)
-
-# 2.5 location_ID = 0
-
-# There are two "countries" using the code 0  - Europe and Others
-
-# 2.5.1) 
-# Country_0_Europe <- ncov %>%
-# filter(locationId == 0 & continentEnglishName == "Europe")
-
-# Conclution: country is North Macedonia (Europe)
-
-# 2.5.2) 
-# Country_0_Cruise <- ncov %>%
-#   filter(locationId == 0 & continentEnglishName == "Others")
-
-# Diamond Princess Cruises - not really a country (Others)
-
-# 3) Populating the countries that NA values according to their code
-
-ncov_Updated$Country_Name[ncov_Updated$Location_ID == 955019] <- "United Arab Emirates"
-
-ncov_Updated$Country_Name[ncov_Updated$Location_ID == 965002] <- "Andorra"
-
-ncov_Updated$Country_Name[ncov_Updated$Location_ID == 965005] <- "Croatia"
-
-ncov_Updated$Country_Name[ncov_Updated$Location_ID == 974006] <- "Dominica"
-
-ncov_Updated$Country_Name[ncov_Updated$Location_ID == 0 & ncov_Updated$Continent_NEW_Name == "Europe"] <- "North Macedonia"
-
-ncov_Updated$Country_Name[ncov_Updated$Location_ID == 0 & ncov_Updated$Continent_NEW_Name == "Others"] <- "Other"
-
-```
-
-```{r Renaming and rearanging the complete columns}
-
-# Renaming the completed continent and country variables 
-
-ncov_Updated <- ncov_Updated %>%
-  rename(Continent_Name_Comp = Continent_NEW_Name,
-         Country_Name_Comp = Country_Name)
-
-ncov_Updated <- ncov_Updated[ ,c(1, 2, 3, 4, 5, 8, 6, 7)]
-
-```
-
-Merging the "ncov_Updated" data set with a spatial data set.
-
-```{r leaflet testing}
-
-# 1. Adding world spacial information 
-World_Countries <- geojson_read("countries.geojson", what = "sp")
-
-World_countries_df <-  World_Countries@data
-
-leaflet(World_Countries)  %>%
-  #addProviderTiles(providers$Esri.WorldGrayCanvas) %>%
-  addPolygons(stroke = FALSE, color = "White", weight = "1", smoothFactor = 0.3,
-               fillOpacity = 0.7, fillColor = "lightblue")
-
-# 2. Does not work 
-
-World_countries_2 <- readOGR(dsn ="C:/Users/Gustav/Desktop/MSc Data Science 1st year/Exploratory data analysis/Assignments/Assignment4", layer = "gadm36", verbose = FALSE)
-
-
-rm(World_countries_2)
-
-# 3. .
-
-Continents_Data <-  readOGR(dsn = "C:/Users/Gustav/Desktop/MSc Data Science 1st year/Exploratory data analysis/Assignments/Assignment4", layer = "continents", verbose = FALSE )
- 
-Continents_df <- Continents_Data@data
-
-
-```
-
-```{r Getting country data from world bank data }
-
-#steos
-
-# 1. Searchin WDI data base
-
-WDIsearch(string = "GDP",
-          field = "name",
-          short = FALSE)
-
-# 2. Retriving data
-
-WDI_df <- data.frame( 
-  WDI(country = "all",
-  start = 2018,
-  end = 2018,
-  extra = TRUE
-  )
-)
-
-# Extracting only useful infromation from dataframe
-
-Complete_Country_Continent_df <-  WDI_df %>%
-  select(iso3c, country, region) %>%
-  filter(region != "Aggregates") %>%
-  group_by(region) %>%
-  summarise(count = n())
-
-
-```
-
-***** NEW DATA SET *****
-
 ```{r Loading new ncov data}
-
 
 # Loading latest data (not going to be used for analysis)
 
@@ -555,16 +106,20 @@ Complete_Country_Continent_df <-  WDI_df %>%
 
 # For reproduceability
 
-rm(ncov_new)
-
 ncov_new <- read.csv(file = "time_series_19_covid_combined_23_03_2020.csv", stringsAsFactors = FALSE)
 
 
 ```
 
-```{r Investigating variables in data sets}
 
-# Steps
+\subsection{Tiding and transforming the data}
+
+The second and thrid steps of data wrangling is tiding and transforming the data. The variables of the "ncovr_new" data set will be investigated and the nesseccary changes/transformations will be made to get the data in a tidy format.   
+
+
+```{r Investigating variables and treating missing values in data sets}
+
+# Steps:
 
 # 1. Investigating type and structre of data
 
@@ -593,7 +148,7 @@ sum(is.na(ncov_new$Deaths))
 ncov_new %>% 
   filter(is.na(Recovered))
 
-# Replace NA values with 0
+# 3.1 Replace NA values with 0
 
 ncov_new$Recovered[is.na(ncov_new$Recovered)] <- 0
 
@@ -602,7 +157,7 @@ ncov_new %>%
 
 ```
 
-```{r additions and transformations to data set}
+```{r Additions and transformations to data set}
 
 # 1. Changing the format of the "Date" variable
 
@@ -623,112 +178,24 @@ ncov_new <- ncov_new %>%
 
 ```
 
-```{r Loading spatial data and transfrorming to geojson format}
 
-# Steps:
+```{r Loading of spatial data}
 
-# 1. Reading in shape file dowloaded from  the natural earth data - http://www.naturalearthdata.com/downloads/
+# Note: The following spatial data was obtained by installing the naturalearth packages.
 
-Spatial_df <- readOGR(dsn = "C:/Users/Gustav/Desktop/MSc Data Science 1st year/Exploratory data analysis/Assignments/Assignment4", layer =  "ne_10m_admin_1_states_provinces", verbose = FALSE )
-
-# 2. Converting SP data frame to geojson format
-
-Spatial_df_geojson <- geojson_json(Spatial_df)
-
-# Saving the geojson file to local file library
-
-geojson_write(Spatial_df_geojson, file = "C:/Users/Gustav/Desktop/MSc Data Science 1st year/Exploratory data analysis/Assignments/Assignment4/Countries_States.geojson")
-
-```
-
-```{r joing data frames}
-
-
-# The following code will join the data of the ncov_new data frame with the Spatial data frame
-
-# Steps
-
-
-# 1. Look at the data of the spacial data (To do test merge)
-
-Spatial_data_df <- Spatial_df@data
-
-# 2. Decide on variables that seem important in spatial data frame
-
-# Variables that seem important are:
-
-# 1. "name": seems to be the province/area/State name (just for add. info)
-
-# 2. "type_en" : Seems to describe the type of region (just for add. info)
-
-# 3. "mapcolor9" : Seems to colour the regions maybe by continents
-
-# 4. "mapcolor13": Seems to colour the regions maybe by continents
-
-# 5. "latitude": Latitude of location (NB)
-
-# 6. "longitude": Longitude of location (NB)
-
-# 7. "admin": Seems to be the countries name (NB)
-
-ncov_Updated
-
-Test_df <- revgeo(latitude = -32.0275, longitude = -59.2824, provider = "google", item = "country", API = "AIzaSyDAlBCwDDrYdTD2OT17X8BjwvlmwxG_PdU")
-
-
-filter(ncov_new, Country_Region == "Thailand"  )
-
-filter(Spatial_data_df, admin == "Thailand")
-
-# Revese geocoding
-
-
-     
-
-```
-
-```{r Tut - Spatial mapping in R}
-
-# 1. Basics
-
-# 1.1 Loading the world data
+# Loading of the world data 
 
 World <- ne_countries(scale = "medium", returnclass = "sf")
-
-class(World)
-
-# 1.2 Basic plot of data
-
-ggplot(data = World) +
-    geom_sf(color = "black", fill = "lightblue" )
-
-# Note: color refers to line color and fill to the fill of the polygons
-
-st_crs(World)
-
-# 1.3 Labeling the map
-
-World_points <- st_centroid(World)
-World_points <- cbind(World, st_coordinates(st_centroid(World$geometry)))
-
-ggplot(data = World) +
-  geom_sf() +
-  geom_text(data = World_points, aes(x=X, y=Y, label=name),
-   color = "darkblue", fontface = "bold", check_overlap = FALSE) +
-  annotate(geom = "text", x = -90, y = 26, label = "Gulf of Mexico", 
-   fontface = "italic", color = "grey22", size = 6) +
-  coord_sf(xlim = c(-102.15, -74.12), ylim = c(7.65, 33.97), expand = FALSE)
-
-# 2. Additional layers
+  
 
 ```
 
 
-```{r Merging of Spatial data and ncov_new data}
+```{r Making neccessary changes to accomplish merging of ncov_new and World data frames}
 
-# Note: The "Country_Region" variable will be used to join the spatial data frame (obtained by the rnaturalearth packages) and the ncov_new data frame. Therfore, additional features will be added to the geometries.  
+# Note: The "Country_Region" variable will be used to join the spatial data frame (obtained by the rnaturalearth packages) and the ncov_new data frame. Therfore, a geometry variable will be added to the ncov_new data frame.  
 
-# Steps
+# Steps:
 
 # 1. Testing to see which country names do NOT coincide between the two data frames.
 
@@ -739,16 +206,15 @@ World_df <- data.frame( Country_Region = World$name_long,
 )
 
 
-# 1.2 Joining the ncov_new data frame with the World_df date frame to investigate cases where Pop_Estimate is NA (i.e there is a mis match in country names and the join cannot be complete)
-
+# 1.2 Joining the ncov_new data frame with the World_df date frame to investigate cases where Pop_Estimate is NA (i.e to investigate where there is a mis match in country names)
 
 Country_Test_df <- left_join(ncov_new, World_df, by = "Country_Region" )
 
 sum(is.na(Country_Test_df$Pop_Estimate))
 
-# Remark: There is NA present. These country names that cause this should be investigated
+# Remark: There is NA's present. These country names that cause this should be investigated
 
-# 1.3 Investigation of the cuntries that present NA values
+# 1.3 Investigation of the countries that present NA values
 
  Mismatch_Countries <- filter(Country_Test_df, is.na(Pop_Estimate)) %>%
   group_by(Country_Region) %>%
@@ -756,7 +222,7 @@ sum(is.na(Country_Test_df$Pop_Estimate))
 
  # Remark: Luckily, there is only 15 counties that does not cooincide. These countries will be manually renamed so that they can be merged successfully.  
  
-# 1.4  Change the following names of the ncov_new data set.
+# 1.4  Change the following names of the ncov_new data set. ("old name" -> "new name")
 
 # 1. Brunei -> Brunei Darussalam 
 # 2. Congo (Brazzaville) -> Republic of the Congo
@@ -776,7 +242,7 @@ sum(is.na(Country_Test_df$Pop_Estimate))
 
 ncov_new$Country_Region[ncov_new$Country_Region == "Brunei"] <- "Brunei Darussalam"
 
-ncov_new$Country_Region[ncov_new$Country_Region == "Congo (Brazzaville)"] <- "Republic of the Congo"
+ncov_new$Country_Region[ncov_new$Country_Region == "Congo (Brazzaville)"] <- "Republic of Congo"
 
 ncov_new$Country_Region[ncov_new$Country_Region == "Congo (Kinshasa)"] <- "Democratic Republic of the Congo"
 
@@ -786,7 +252,7 @@ ncov_new$Country_Region[ncov_new$Country_Region == "Cruise Ship"] <- "Japan"
 
 ncov_new$Country_Region[ncov_new$Country_Region == "Czechia"] <- "Czech Republic"
 
-ncov_new$Country_Region[ncov_new$Country_Region == "Eswatini"] <- "eSwatini"
+ncov_new$Country_Region[ncov_new$Country_Region == "Eswatini"] <- "Swaziland"
 
 ncov_new$Country_Region[ncov_new$Country_Region == "Gambia"] <- "The Gambia"
 
@@ -798,7 +264,7 @@ ncov_new$Country_Region[ncov_new$Country_Region == "Russia"] <- "Russian Federat
 
 ncov_new$Country_Region[ncov_new$Country_Region == "US"] <- "United States"
 
-ncov_new$Country_Region[ncov_new$Country_Region == "Cabo Verde"] <- "Republic of Cabo Verde"
+ncov_new$Country_Region[ncov_new$Country_Region == "Cabo Verde"] <- "Cape Verde"
 
 ncov_new$Country_Region[ncov_new$Country_Region == "North Macedonia"] <- "Macedonia"
 
@@ -812,63 +278,26 @@ Country_Test_df <- left_join(ncov_new, World_df, by = "Country_Region" )
 sum(is.na(Country_Test_df$Pop_Estimate))
 
 
-# Remark: There are no missing values, therefore ALL the contries names of the ncov_new data set and the spatial data set coincides and the ACTUAL merging of features can continue.
+# Remark: There are no missing values, therefore ALL the country names of the ncov_new data set and the spatial data set coincides and the ACTUAL merging of features can continue.
 
 
-# 2. Actual merging of spatial data (World) and ncov_new
-
-# 2.1 Selcting only important features from the world data set and storing in World_Merge_df
+# 2. Creating Spatial data frame that only contains the important features from the world data set and storing in World_Merge_df. The spatial data frame will be used in the merging operation in the next code chunk.
 
 World_Merge_df <- World %>% 
-  select(name_long, iso_a3) %>%
+  select(name_long,continent) %>%
   rename(Country_Region  = name_long)
 
-# 2.2 Final megrge 
-
-ncov_new_Spatial <- left_join(World_Merge_df, ncov_new, by = "Country_Region")
-
-class(ncov_new_Spatial)
-
-# 2.3 Changing the class of the new created df to be a data frame as well as sf
-
-st_geometry(ncov_new_Spatial) <- ncov_new_Spatial$geometry
-
-class(ncov_new_Spatial)
-
 ```
 
-```{r additional changes to new created spatial data frame}
 
-# The goal of this section is to remove and change some variables of the ncov_new_Spatial data frame
+```{r Merging operation of spatial data}
+
+# The following code chunk deals with creating a data frame that contains the nessecceray data that will be used to create plots of a world map.
 
 
 # Steps:
 
-
-# 1. Remove "Province_State" variable (since it will not be used in the analysis)
-
-ncov_new_Spatial <- ncov_new_Spatial %>%
-  select()
-
-
-glimpse(ncov_new_Spatial)
-
-
-attr(ncov_new_Spatial, "sf_column")
-
-
-```
-
-
-
-```{r FINAL Spatial data Merging operation}
-
-# The following code chunk deals with creating a data frame that contains the nessecceray data that will be used to create plots on a wolrd map.
-
-
-# Steps:
-
-# 1. Creating the data frame that encapsulates all the data needed for creating animation. The data frame basically gives a count summary of each country in the data set per day (from 2020-01-22 to 2020-03-23) 
+# 1. Creating the data frame that encapsulates all the data needed for creating the animation. The data frame basically gives a count summary of each country in the data set per day (from 2020-01-22 to 2020-03-23) 
 
 
 ncov_new_FINAL_data <-  ncov_new %>% 
@@ -879,7 +308,6 @@ ncov_new_FINAL_data <-  ncov_new %>%
             Infected_Country = sum(Infected)) %>% 
   as.data.frame()
 
-class(ncov_new_FINAL_data)
 
 # 1.1 Changing Some variables that are type double to integer
  
@@ -896,78 +324,353 @@ ncov_new_Spatial <- left_join(ncov_new_FINAL_data, World_Merge_df , by = "Countr
 st_geometry(ncov_new_Spatial) <- ncov_new_Spatial$geometry
 
 
-
 ```
-
-```{r plot testing}
-
-
-
-
-Test_df <- ncov_new_Spatial %>% 
-  filter(Date == "2020-03-23")
-
-
- Map <- ggplot()  +
-   geom_sf(data = ncov_new_Spatial, aes(frame = Date, fill = Cum_Confirmed_Country)) + 
-   coord_sf(xlim = c(-30, 55), ylim = c(-40, 40), expand = FALSE) +
-    scale_fill_gradient(low="blue", high="red", trans = "log10")
-   
- 
-Map
-
-ggplotly(Map)
- 
- Map + transition_manual(Date)  +
-  labs(title = "Date: {current_frame}")
- 
-
-animate(Map)
-
-Map$labels
-
-
-```
-
-
-
-
-
-
-```{r leaflet testing with new data}
-
-Spatial_df <- readOGR("Countries_States.geojson")
-
-
-leaflet(ncov_new)  %>%
-  addProviderTiles(providers$Esri.NatGeoWorldMap) %>%
-  addMarkers(lat = 35.4437	 , lng = 139.638 )
-
-
-```
-
-
-```{r Using R maps}
-
-Map_World <- map_data("world2Hires")
-
-ggplot() + 
-  geom_polygon(data = Map_World, aes(x = long, y = lat, group = group ))
-
-
-
-
-
-
-
-
-
-```
-
-
 
 
 \section{Visualisations}
+
+
+```{r  Creating animation for "slide show" creation}
+
+# Note: The following code will be associated with creating animations that will be used in the final slide show
+
+World %>% 
+  st_set_geometry(value = NULL) %>% 
+  group_by(continent) %>% 
+  summarise(n = n())
+
+# Steps: 
+
+# 1) Creating World map gif
+
+World_points<- st_centroid(ncov_new_Spatial)
+World_points <- cbind(ncov_new_Spatial, st_coordinates(st_centroid(ncov_new_Spatial$geometry)))
+
+
+ World_Map <- ggplot()  +
+   geom_sf(data = World, fill = "gray48") + 
+   geom_sf(data = ncov_new_Spatial, aes(frame = Date, fill = Cum_Confirmed_Country)) +
+    scale_fill_gradient(low="white", high="red", trans = "log10") + 
+   labs(title = "Cumalative confirmed cases of covid 19 - World Map", subtitle = "Date: {current_frame}", x = "Latitude",
+       y = "Longitude", fill = "Count") + 
+   theme(plot.title = element_text(size = 14, face = "bold"), 
+         panel.grid.major = element_line(color = "gray65", linetype = "dashed", size = 0.5), panel.background = element_rect(fill = "aliceblue"))
+   
+
+World_Map_anim <-  World_Map + transition_manual(Date)
+
+World_Map_Gif <- animate(World_Map_anim, fps = 5, width = 950, height = 850)
+
+anim_save("1.World_Map.gif", animation = World_Map_Gif, path = "C:/Users/Gustav/Desktop/MSc Data Science 1st year/Exploratory data analysis/Assignments/Assignment4" )
+
+
+# 2) Africa gif
+
+ncov_new_Spatial_Afr <- ncov_new_Spatial %>% 
+  filter(continent == "Africa")
+
+World_Points_Afr <- st_centroid(ncov_new_Spatial_Afr)
+
+World_Points_Afr <- cbind(ncov_new_Spatial_Afr, st_coordinates(st_centroid(ncov_new_Spatial_Afr$geometry)))
+
+Africa_data <- World %>% 
+  filter(continent == "Africa")
+
+Map_Afr <- ggplot() + 
+  geom_sf(data = Africa_data, fill = "gray48" ) +
+  geom_sf(data = ncov_new_Spatial_Afr, aes(frame = Date, fill = Cum_Confirmed_Country)) +
+  scale_fill_gradient(low="white", high="red", trans = "log10") +
+  geom_text(data = World_Points_Afr, aes(x = X, y = Y, label = Cum_Confirmed_Country), check_overlap = FALSE) + labs(title = "Cumalative confirmed cases of covid 19 - Africa", subtitle = "Date: {current_frame}", fill = "Count", x = "Latitude", y = "Longitude" ) + 
+  theme(title = element_text(size = 14, face = "bold"), panel.grid.major = element_line(color = "gray65", linetype = "dashed", size = 0.5), panel.background = element_rect(fill = "aliceblue"))
+  
+Map_Afr_Anim <-  Map_Afr  + 
+  transition_manual(Date)
+
+Afr_Gif <-  animate(Map_Afr_Anim, fps = 5, width = 950, height = 750)
+
+anim_save("2.Afr.gif", animation = Afr_Gif, path = "C:/Users/Gustav/Desktop/MSc Data Science 1st year/Exploratory data analysis/Assignments/Assignment4" )
+
+# 3) Europe gif
+
+ncov_new_Spatial_Eur <- ncov_new_Spatial %>% 
+  filter(continent == "Europe")
+
+World_Points_Eur <- st_centroid(ncov_new_Spatial_Eur)
+
+World_Points_Eur <- cbind(ncov_new_Spatial_Eur, st_coordinates(st_centroid(ncov_new_Spatial_Eur$geometry)))
+
+Europe_data <- World %>% 
+  filter(continent == "Europe")
+
+Map_Eur <- ggplot() + 
+  geom_sf(data = Europe_data, fill = "gray48") +
+  geom_sf(data = ncov_new_Spatial_Eur, aes(frame = Date, fill = Cum_Confirmed_Country)) +
+  coord_sf(xlim = c(-40, 100), ylim = c(30,75), expand = FALSE) +
+  scale_fill_gradient(low="white", high="red", trans = "log10") +
+  geom_text(data = World_Points_Eur, aes(x = X, y = Y, label = Cum_Confirmed_Country), check_overlap = FALSE) + labs(title = "Cumalative confirmed cases of covid 19 - Europe", subtitle = "Date: {current_frame}", fill = "Count", x = "Latitude", y = "Longitude" ) + 
+  theme(title = element_text(size = 14, face = "bold"), panel.grid.major = element_line(color = "gray65", linetype = "dashed", size = 0.5), panel.background = element_rect(fill = "aliceblue"))
+  
+Map_Eur_Anim <-  Map_Eur  + 
+  transition_manual(Date)
+
+Eur_Gif <-  animate(Map_Eur_Anim, fps = 5, width = 950, height = 750)
+
+anim_save("3.Eur.gif", animation = Eur_Gif, path = "C:/Users/Gustav/Desktop/MSc Data Science 1st year/Exploratory data analysis/Assignments/Assignment4" )
+
+
+# 4) Asia gif
+
+ncov_new_Spatial_Asia <- ncov_new_Spatial %>% 
+  filter(continent == "Asia")
+
+World_Points_Asia <- st_centroid(ncov_new_Spatial_Asia)
+
+World_Points_Asia <- cbind(ncov_new_Spatial_Asia, st_coordinates(st_centroid(ncov_new_Spatial_Asia$geometry)))
+
+Asia_data <- World %>% 
+  filter(continent == "Asia")
+
+Map_Asia <- ggplot() + 
+  geom_sf(data = Asia_data, fill = "gray48") +
+  geom_sf(data = ncov_new_Spatial_Asia, aes(frame = Date, fill = Cum_Confirmed_Country)) +
+  scale_fill_gradient(low="white", high="red", trans = "log10") +
+  geom_text(data = World_Points_Asia, aes(x = X, y = Y, label = Cum_Confirmed_Country), check_overlap = FALSE) + labs(title = "Cumalative confirmed cases of covid 19 - Asia", subtitle = "Date: {current_frame}", fill = "Count", x = "Latitude", y = "Longitude" ) + 
+  theme(title = element_text(size = 14, face = "bold"), panel.grid.major = element_line(color = "gray65", linetype = "dashed", size = 0.5), panel.background = element_rect(fill = "aliceblue"))
+  
+Map_Asia_Anim <-  Map_Asia  + 
+  transition_manual(Date)
+
+Asia_Gif <-  animate(Map_Asia_Anim, fps = 5, width = 950, height = 750)
+
+anim_save("4.Asia.gif", animation = Asia_Gif, path = "C:/Users/Gustav/Desktop/MSc Data Science 1st year/Exploratory data analysis/Assignments/Assignment4" )
+
+# 5) North America gif
+
+ncov_new_Spatial_USA <- ncov_new_Spatial %>% 
+  filter(continent == "North America")
+
+World_Points_USA <- st_centroid(ncov_new_Spatial_USA)
+
+World_Points_USA <- cbind(ncov_new_Spatial_USA, st_coordinates(st_centroid(ncov_new_Spatial_USA$geometry)))
+
+USA_data <- World %>% 
+  filter(continent == "North America")
+
+Map_USA <- ggplot() + 
+  geom_sf(data = USA_data, fill = "gray48") +
+  geom_sf(data = ncov_new_Spatial_USA, aes(frame = Date, fill = Cum_Confirmed_Country)) +
+  coord_sf(xlim = c(-180,-10), ylim = c(5, 85), expand = FALSE) +
+  scale_fill_gradient(low="white", high="red", trans = "log10") +
+  geom_text(data = World_Points_USA, aes(x = X, y = Y, label = Cum_Confirmed_Country), check_overlap = FALSE) + labs(title = "Cumalative confirmed cases of covid 19 - North America", subtitle = "Date: {current_frame}", fill = "Count", x = "Latitude", y = "Longitude" ) + 
+  theme(title = element_text(size = 14, face = "bold"), panel.grid.major = element_line(color = "gray65", linetype = "dashed", size = 0.5), panel.background = element_rect(fill = "aliceblue"))
+  
+Map_USA_Anim <-  Map_USA  + 
+  transition_manual(Date)
+
+USA_Gif <-  animate(Map_USA_Anim, fps = 5, width = 950, height = 750)
+
+anim_save("5.USA.gif", animation = USA_Gif, path = "C:/Users/Gustav/Desktop/MSc Data Science 1st year/Exploratory data analysis/Assignments/Assignment4" )
+
+# 6) Oceania gif
+
+ncov_new_Spatial_Oce <- ncov_new_Spatial %>% 
+  filter(continent == "Oceania")
+
+World_Points_Oce <- st_centroid(ncov_new_Spatial_Oce)
+
+World_Points_Oce <- cbind(ncov_new_Spatial_Oce, st_coordinates(st_centroid(ncov_new_Spatial_Oce$geometry)))
+
+Oceania_data <- World %>% 
+  filter(continent == "Oceania")
+
+Map_Oce <- ggplot() + 
+  geom_sf(data = Oceania_data, fill = "gray48") +
+  geom_sf(data = ncov_new_Spatial_Oce, aes(frame = Date, fill = Cum_Confirmed_Country)) +
+  coord_sf(xlim = c(110,190), ylim = c(-60,20), expand = FALSE) +
+  scale_fill_gradient(low="white", high="red", trans = "log10") +
+  geom_text(data = World_Points_Oce, aes(x = X, y = Y, label = Cum_Confirmed_Country), check_overlap = FALSE, size = 6) + labs(title = "Cumalative confirmed cases of covid 19 - Oceania", subtitle = "Date: {current_frame}", fill = "Count", x = "Latitude", y = "Longitude" ) + 
+  theme(title = element_text(size = 14, face = "bold"), panel.grid.major = element_line(color = "gray65", linetype = "dashed", size = 0.5), panel.background = element_rect(fill = "aliceblue"))
+  
+Map_Oce_Anim <-  Map_Oce  + 
+  transition_manual(Date)
+
+Oce_Gif <-  animate(Map_Oce_Anim, fps = 5, width = 950, height = 750)
+
+anim_save("6.Oce.gif", animation = Oce_Gif, path = "C:/Users/Gustav/Desktop/MSc Data Science 1st year/Exploratory data analysis/Assignments/Assignment4" )
+
+# 7) South America gif
+
+ncov_new_Spatial_SAm <- ncov_new_Spatial %>% 
+  filter(continent == "South America")
+
+World_Points_SAm <- st_centroid(ncov_new_Spatial_SAm)
+
+World_Points_SAm <- cbind(ncov_new_Spatial_SAm, st_coordinates(st_centroid(ncov_new_Spatial_SAm$geometry)))
+
+SAm_data <- World %>% 
+  filter(continent == "South America")
+
+Map_SAm <- ggplot() + 
+  geom_sf(data = SAm_data, fill = "gray48") +
+  geom_sf(data = ncov_new_Spatial_SAm, aes(frame = Date, fill = Cum_Confirmed_Country)) +
+  coord_sf(xlim = c(-100,-30), ylim = c(-60,20), expand = FALSE) +
+  scale_fill_gradient(low="white", high="red", trans = "log10") +
+  geom_text(data = World_Points_SAm, aes(x = X, y = Y, label = Cum_Confirmed_Country), check_overlap = FALSE) + labs(title = "Cumalative confirmed cases of covid 19 - South America", subtitle = "Date: {current_frame}", fill = "Count", x = "Latitude", y = "Longitude" ) + 
+  theme(title = element_text(size = 14, face = "bold"), panel.grid.major = element_line(color = "gray65", linetype = "dashed", size = 0.5), panel.background = element_rect(fill = "aliceblue"))
+  
+Map_SAm_Anim <-  Map_SAm  + 
+  transition_manual(Date)
+
+SAm_Gif <-  animate(Map_SAm_Anim, fps = 5, width = 950, height = 750)
+
+anim_save("7.SAm.gif", animation =SAm_Gif, path = "C:/Users/Gustav/Desktop/MSc Data Science 1st year/Exploratory data analysis/Assignments/Assignment4" )
+
+# 8) Seven seas (open ocean) gif (Not very imformative)
+
+ncov_new_Spatial_SS <- ncov_new_Spatial %>% 
+  filter(continent == "Seven seas (open ocean)")
+
+World_Points_SS <- st_centroid(ncov_new_Spatial_SS)
+
+World_Points_SS <- cbind(ncov_new_Spatial_SS, st_coordinates(st_centroid(ncov_new_Spatial_SS$geometry)))
+
+SS_data <- World %>% 
+  filter(continent == "Seven seas (open ocean)")
+
+Map_SS <- ggplot() + 
+  geom_sf(data = SS_data) +
+  geom_sf(data = ncov_new_Spatial_SS, aes(frame = Date, fill = Cum_Confirmed_Country)) +
+  scale_fill_gradient(low="white", high="red", trans = "log10") +
+  geom_text(data = World_Points_SS, aes(x = X, y = Y, label = Cum_Confirmed_Country), check_overlap = FALSE) + labs(title = "Cumalative confirmed cases of covid 19 - Seven seas", subtitle = "Date: {current_frame}", fill = "Count", x = "Latitude", y = "Longitude" ) + 
+  theme(title = element_text(size = 14, face = "bold"))
+  
+Map_SS_Anim <-  Map_SS  + 
+  transition_manual(Date)
+
+SS_Gif <-  animate(Map_SS_Anim, fps = 5, width = 950, height = 750)
+
+anim_save("SS.gif", animation =SS_Gif, path = "C:/Users/Gustav/Desktop/MSc Data Science 1st year/Exploratory data analysis/Assignments/Assignment4" )
+
+# 8) Meging all gifs in final gif
+
+Final_gif <- read.gif("Covid_19_gif.gif")
+
+
+```
+
+```{r TRying individual plots of continents}
+
+# Getting names of continents
+ncov_new_Spatial %>% 
+  st_set_geometry(value = NULL) %>% 
+  group_by(continent) %>% 
+  summarise(n  = n())
+
+# 1) Sub-Saharan Africa
+
+
+# 2) Europe & Central Asia
+
+ncov_new_Spatial_Eur_CA <- ncov_new_Spatial %>% 
+  filter(Continent_Area == "Europe & Central Asia")
+
+
+World_Points_Eur_CA <- st_centroid(ncov_new_Spatial_Eur_CA)
+
+World_Points_Eur_CA<- cbind(ncov_new_Spatial_Eur_CA, st_coordinates(st_centroid(ncov_new_Spatial_Eur_CA$geometry)))
+
+
+Map_Eur_CA <- ggplot() + 
+  geom_sf(data = ncov_new_Spatial_Eur_CA, aes(frame = Date, fill = Cum_Confirmed_Country)) +
+    scale_fill_gradient(low="white", high="red", trans = "log10") +
+   geom_text(data = World_Points_Eur_CA, aes(x = X, y = Y, label = Cum_Confirmed_Country), check_overlap = FALSE) + 
+  coord_sf(xlim = c(-40,50), ylim = c(30,75), expand = FALSE)
+  
+Map_Eur_CA_anim <-  Map_Eur_CA  + 
+  transition_manual(Date) +
+  labs(title = "Date: {current_frame}")
+
+Eur_CA_gif <- animate(Map_Eur_CA_anim, fps = 1, width = 950, height = 750)
+
+Eur_CA_gif 
+
+Eur_CA_mgif <- image_read(Eur_CA_gif)
+
+SS_Afr_mgif <- image_read(SS_Afr_gif)
+
+image_append(c(Eur_CA_mgif, SS_Afr_mgif))
+
+```
+
+ 
+```{r world plot}
+World_plot <- plot_grid(Map_Eur_CA, Map_SS_Africa, 
+                        labels = c("Europe", "Sub-Saharan Africa"))
+
+World_plot
+
+World_anim <- World_plot + transition_manual(Date) +
+  labs(title = "Date: {current_frame}")
+
+animate(World_anim, fps = 1, width = 950, height = 750)
+
+plot_grid(Map_Eur_CA_anim, Map_SS_Africa_anim, labels = c("Europe", "Sub-Saharan Africa"))
+
+# gridExtra package
+
+
+World_plot <- grid.arrange(Map_Eur_CA_anim, Map_SS_Africa_anim)
+
+World_anim <- World_plot + transition_manual(Date) +
+  labs(title = "Date: {current_frame}")
+
+animate(World_anim, fps = 1, width = 950, height = 750)
+```
+
+```{r creating slide show}
+
+Slide_show <- list("World Map" = World_Map_Gif,
+                   "SS_Africa" = SS_Afr_gif)
+
+par(mfrow = c(1,2))
+
+for(i in 1:2){
+  Slide_show[i]
+}
+
+i <- 1
+while (i < 3) {
+  Slide_show[i]
+  i <- i+1
+  
+}
+Slide_show[1]
+Slide_show[2]
+
+new_gif <- c(Slide_show[1], Slide_show[2])
+
+new_gif
+
+str(new_gif)
+
+a_mgif <- image_read(SS_Afr_gif)
+b_mgif <- image_read(World_Map_Gif)
+
+new_gif <- image_append(c(a_mgif[1], b_mgif[1]))
+for(i in 2:62){
+  combined <- image_append(c(a_mgif[i], b_mgif[i]))
+  new_gif <- c(new_gif, combined)
+}
+
+new_gif
+
+image_append(a_mgif[64])
+
+```
+
+
+**** Example ****
+
 
 As seen by figure \ref{fig:Normal_Distribution}, the normal distribution is plotted.
 Remember the default figure width height is 6 x 4.5 
