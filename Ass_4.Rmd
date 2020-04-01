@@ -29,14 +29,10 @@ knitr::opts_chunk$set(echo = TRUE)
 
 #install.packages("tidyverse")
 #install.packages("remotes")
-#install.packages("maps")
-#install.packages("geojsonio")
 #install.packages("rgdal")
 #install.packages("spdplyr")
-#install.packages("WDI")
 #install.packages("sf")
 #install.packages("countrycode")
-#install.packages("revgeo")
 #install.packages("ggmap")
 #install.packages("rnaturalearth")
 #install.packages("rnaturalearthdata")
@@ -46,29 +42,21 @@ knitr::opts_chunk$set(echo = TRUE)
 #install.packages("Rtools")
 #devtools::install_github("thomasp85/gganimate/releases/tag/v0.1.1", force = TRUE)
 # install.packages("gifski")
-# install.packages("cowplot")
-# install.packages("gridExtra")
-# install.packages("magick")
-install.packages("caTools")
+#install.packages("caTools")
+install.packages("shiny")
 
+library(shiny)
 library(caTools)
-library(magick)
-library(gridExtra)
-library(cowplot)
 library(gifski)
 library(devtools)
 library(tidyverse)
 library(remotes)
 library(plotly)
 library(leaflet)
-library(maps)
-library(geojsonio)
 library(rgdal)
 library(spdplyr)
-library(WDI)
 library(sf)
 library(countrycode)
-library(revgeo)
 library(ggmap)
 library(rnaturalearth)
 library(rnaturalearthdata)
@@ -551,120 +539,73 @@ SS_Gif <-  animate(Map_SS_Anim, fps = 5, width = 950, height = 750)
 
 anim_save("SS.gif", animation =SS_Gif, path = "C:/Users/Gustav/Desktop/MSc Data Science 1st year/Exploratory data analysis/Assignments/Assignment4" )
 
-# 8) Meging all gifs in final gif
+```
 
-Final_gif <- read.gif("Covid_19_gif.gif")
+```{r Importing the merged gif file}
+
+
+Covid_19_gif <- read.gif("Ass_4_gif.gif")
 
 
 ```
 
-```{r TRying individual plots of continents}
-
-# Getting names of continents
-ncov_new_Spatial %>% 
-  st_set_geometry(value = NULL) %>% 
-  group_by(continent) %>% 
-  summarise(n  = n())
-
-# 1) Sub-Saharan Africa
+Part 2: Shiny app development
 
 
-# 2) Europe & Central Asia
-
-ncov_new_Spatial_Eur_CA <- ncov_new_Spatial %>% 
-  filter(Continent_Area == "Europe & Central Asia")
+```{r Shiny template}
 
 
-World_Points_Eur_CA <- st_centroid(ncov_new_Spatial_Eur_CA)
+# User interface: The things that are essentially going to be i your app. Basically makes the webpage and space for the elements that are going to be present.
 
-World_Points_Eur_CA<- cbind(ncov_new_Spatial_Eur_CA, st_coordinates(st_centroid(ncov_new_Spatial_Eur_CA$geometry)))
-
-
-Map_Eur_CA <- ggplot() + 
-  geom_sf(data = ncov_new_Spatial_Eur_CA, aes(frame = Date, fill = Cum_Confirmed_Country)) +
-    scale_fill_gradient(low="white", high="red", trans = "log10") +
-   geom_text(data = World_Points_Eur_CA, aes(x = X, y = Y, label = Cum_Confirmed_Country), check_overlap = FALSE) + 
-  coord_sf(xlim = c(-40,50), ylim = c(30,75), expand = FALSE)
+ui <- fluidPage(
+  # input functions: sliders, check boxes, radio buttons, action buttons etc.
+  # ALWAYS have 1) inputId and 2) label.
+  # Use help file to retrieve the arguments needed for each input function
   
-Map_Eur_CA_anim <-  Map_Eur_CA  + 
-  transition_manual(Date) +
-  labs(title = "Date: {current_frame}")
-
-Eur_CA_gif <- animate(Map_Eur_CA_anim, fps = 1, width = 950, height = 750)
-
-Eur_CA_gif 
-
-Eur_CA_mgif <- image_read(Eur_CA_gif)
-
-SS_Afr_mgif <- image_read(SS_Afr_gif)
-
-image_append(c(Eur_CA_mgif, SS_Afr_mgif))
-
-```
-
- 
-```{r world plot}
-World_plot <- plot_grid(Map_Eur_CA, Map_SS_Africa, 
-                        labels = c("Europe", "Sub-Saharan Africa"))
-
-World_plot
-
-World_anim <- World_plot + transition_manual(Date) +
-  labs(title = "Date: {current_frame}")
-
-animate(World_anim, fps = 1, width = 950, height = 750)
-
-plot_grid(Map_Eur_CA_anim, Map_SS_Africa_anim, labels = c("Europe", "Sub-Saharan Africa"))
-
-# gridExtra package
+  
+  # output functions: Plots, tables, text etc.
+  # ALWAYS have 1) outputId
+  
+)
 
 
-World_plot <- grid.arrange(Map_Eur_CA_anim, Map_SS_Africa_anim)
+# inputs: Useally what the user selects
+# outputs: What you whant to show like plots , tables texts. The things that wil repsond when yout user changes a input
 
-World_anim <- World_plot + transition_manual(Date) +
-  labs(title = "Date: {current_frame}")
 
-animate(World_anim, fps = 1, width = 950, height = 750)
-```
+# When using the server function there are three rules (Reactivityy 101):
+# 1) Save objects to display to output$*
+# 2) Build objects to display with render*({ R code block})
+# 3) Use the input values with input$* (to access the values the user chooses)
 
-```{r creating slide show}
-
-Slide_show <- list("World Map" = World_Map_Gif,
-                   "SS_Africa" = SS_Afr_gif)
-
-par(mfrow = c(1,2))
-
-for(i in 1:2){
-  Slide_show[i]
-}
-
-i <- 1
-while (i < 3) {
-  Slide_show[i]
-  i <- i+1
+server <- function(input, output){
+  
   
 }
-Slide_show[1]
-Slide_show[2]
 
-new_gif <- c(Slide_show[1], Slide_show[2])
+shinyApp(ui = ui, server = server )
 
-new_gif
+# Part 2 Tut
 
-str(new_gif)
+# Reactive toolkit
 
-a_mgif <- image_read(SS_Afr_gif)
-b_mgif <- image_read(World_Map_Gif)
+# 1. Render functions: render*({R code chunk}). Makes objects to display
+# 2. Reactive functions: Basically used to rename a reactive object. the syntax is as follows: data <- reactive({input$*}). Very important: the reactive object created (data) is not a value but actually a function and therefore everytime it needs to be used it needs to be called data().
+# 3. isolate function: Basically makes a reactive object non-reactive. The syntax is isolate({ }).
+# 4. observeEvent function: Triggers code to run on server(your R consol). Useally used to get info from the interface that the the user does not know of. The syntax is observeEvent(input$*, {print(input$)})
+# 5. eventReactive function: Basically a mixture of reactive function and observe event. The function only uses the reactive value when a condition is met (ie a button is clicked etc)
+# 6. reactiveValues function: Creates a list of reactive values to use in you app. Basically creating a set of test values for your app. The syntax is: reactiveValue(data = rnorm(100)). Useally used with observEvent. NB for cumalative plot.
 
-new_gif <- image_append(c(a_mgif[1], b_mgif[1]))
-for(i in 2:62){
-  combined <- image_append(c(a_mgif[i], b_mgif[i]))
-  new_gif <- c(new_gif, combined)
-}
+# Part 3 tut
 
-new_gif
+#Contents:
+# 1. Static elements: HTML tags
+# 2. Layout: Organising your web-page in rows and columns
+# 3. Panels: How differnt layers are stacked up on each other like tabs. Look at the ready-made panels
+# 4. DashboardPage() http://rstudio.github.io?shinydashboard - Tut
+# 5. CSS - styling your dashboard (look at getbootstrap.com)
+# 6. NB! Customise your apps: http://shiny.rstudio.com/articles/css.html
 
-image_append(a_mgif[64])
 
 ```
 
