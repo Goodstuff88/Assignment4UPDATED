@@ -43,8 +43,12 @@ knitr::opts_chunk$set(echo = TRUE)
 #devtools::install_github("thomasp85/gganimate/releases/tag/v0.1.1", force = TRUE)
 # install.packages("gifski")
 #install.packages("caTools")
-install.packages("shiny")
+#install.packages("shiny")
+#install.packages("shinydashboard")
+install.packages("fontawesome")
 
+library(shinydashboard)
+library(gapminder)
 library(shiny)
 library(caTools)
 library(gifski)
@@ -317,6 +321,7 @@ st_geometry(ncov_new_Spatial) <- ncov_new_Spatial$geometry
 
 \section{Visualisations}
 
+Part 1 - Animation
 
 ```{r  Creating animation for "slide show" creation}
 
@@ -543,68 +548,145 @@ anim_save("SS.gif", animation =SS_Gif, path = "C:/Users/Gustav/Desktop/MSc Data 
 
 ```{r Importing the merged gif file}
 
+# Doesnt seem to work
 
 Covid_19_gif <- read.gif("Ass_4_gif.gif")
-
 
 ```
 
 Part 2: Shiny app development
 
 
-```{r Shiny template}
+```{r Shiny app development}
 
+# Steps:
 
-# User interface: The things that are essentially going to be i your app. Basically makes the webpage and space for the elements that are going to be present.
+# 1 Code that will give the output for the dashboard
 
-ui <- fluidPage(
-  # input functions: sliders, check boxes, radio buttons, action buttons etc.
-  # ALWAYS have 1) inputId and 2) label.
-  # Use help file to retrieve the arguments needed for each input function
+# 1.1 Determining global count of each variable (Cumalative confirmed, deaths, recoveries etc.)
+
+Covid_Col_Sums <- ncov_new_FINAL_data %>%
+  subset(Date == "2020-03-23") %>%
+  select(-Country_Region, -Date) %>% 
+  colSums()
   
-  
-  # output functions: Plots, tables, text etc.
-  # ALWAYS have 1) outputId
+
+
+
+
+
+#2.1 Define all the elements of the  header, sidebar and body of the dashboard. 
+
+header <- dashboardHeader(
+  title = "Covid 19 - 23/03/2020"
   
 )
 
+sidebar <- dashboardSidebar(
+  
+# Adding tabs to the sidebar in the dashboard
+  
+sidebarMenu(
+menuItem("Word Data",
+tabName = "world_data"),
+menuItem("Country/Region Data",
+tabName = "country_region_data")
+ )
+)
+  
 
-# inputs: Useally what the user selects
-# outputs: What you whant to show like plots , tables texts. The things that wil repsond when yout user changes a input
+body <- dashboardBody(
+  
+# Linking the tabs created in the sidebar to reflect in the body of the dashboard
+  
+ tabItems(
+tabItem(tabName = "world_data",
+
+fluidRow(
+  
+  column( width = 3,
+        valueBox(subtitle = "Global confirmed cases",
+                value = Covid_Col_Sums[[1]],
+                icon = icon(name = "globe"),
+                
+                width = 12)  
+    
+  ),
+  column( width = 3,
+          valueBox(subtitle = "Global deaths",
+                value = Covid_Col_Sums[[3]],
+                icon = icon("dizzy", lib = "font-awesome" ),
+               # color = "red",
+                width = 12)
+    
+  ),
+  column(width = 3,
+         valueBox(subtitle = "Global recoveries",
+                value = Covid_Col_Sums[[2]],
+                icon = icon("clipboard-check"),
+               # color = "green",
+                width = 12)
+  ),
+  column(width = 3,
+         valueBox(subtitle = "Global infective cases",
+                value = Covid_Col_Sums[[4]],
+                icon = icon("stethoscope"),
+                #color = "yellow",
+                width = 12)
+         )
+  
+  
+),
+
+# Creating space for leaflet and table output 
+
+fluidRow(
+  
+  column(width = 9,
+      leafletOutput("World_Map")
+         ),
+  column(width = 3,
+         tableOutput("World_Table"))
+  
+ )
+        
+),
+tabItem(tabName = "country_region_data",
+"The country data")
+ )
+)
 
 
-# When using the server function there are three rules (Reactivityy 101):
-# 1) Save objects to display to output$*
-# 2) Build objects to display with render*({ R code block})
-# 3) Use the input values with input$* (to access the values the user chooses)
+
+ui <- dashboardPage(header, sidebar, body)
+
+
 
 server <- function(input, output){
+  
+# World data tab
+   output$World_Map <- renderLeaflet({
+     leaflet() %>% 
+       addTiles()
+     
+   })
+   
+# World table output
+   output$World_Table <- renderTable({
+     ncov_new_FINAL_data %>% 
+       subset(Date == "2020-03-23") %>% 
+       select(Country_Region, Cum_Confirmed_Country) %>% 
+     arrange(desc(Cum_Confirmed_Country)) %>% 
+       
+       
+   })
+   
   
   
 }
 
 shinyApp(ui = ui, server = server )
 
-# Part 2 Tut
-
-# Reactive toolkit
-
-# 1. Render functions: render*({R code chunk}). Makes objects to display
-# 2. Reactive functions: Basically used to rename a reactive object. the syntax is as follows: data <- reactive({input$*}). Very important: the reactive object created (data) is not a value but actually a function and therefore everytime it needs to be used it needs to be called data().
-# 3. isolate function: Basically makes a reactive object non-reactive. The syntax is isolate({ }).
-# 4. observeEvent function: Triggers code to run on server(your R consol). Useally used to get info from the interface that the the user does not know of. The syntax is observeEvent(input$*, {print(input$)})
-# 5. eventReactive function: Basically a mixture of reactive function and observe event. The function only uses the reactive value when a condition is met (ie a button is clicked etc)
-# 6. reactiveValues function: Creates a list of reactive values to use in you app. Basically creating a set of test values for your app. The syntax is: reactiveValue(data = rnorm(100)). Useally used with observEvent. NB for cumalative plot.
-
-# Part 3 tut
-
-#Contents:
-# 1. Static elements: HTML tags
-# 2. Layout: Organising your web-page in rows and columns
-# 3. Panels: How differnt layers are stacked up on each other like tabs. Look at the ready-made panels
-# 4. DashboardPage() http://rstudio.github.io?shinydashboard - Tut
-# 5. CSS - styling your dashboard (look at getbootstrap.com)
-# 6. NB! Customise your apps: http://shiny.rstudio.com/articles/css.html
 
 
 ```
