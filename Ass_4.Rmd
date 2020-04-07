@@ -45,8 +45,12 @@ knitr::opts_chunk$set(echo = TRUE)
 #install.packages("caTools")
 #install.packages("shiny")
 #install.packages("shinydashboard")
-install.packages("fontawesome")
+#install.packages("gapminder")
+#install.packages("DT")
+install.packages("RColorBrewer")
 
+library(RColorBrewer)
+library(DT)
 library(shinydashboard)
 library(gapminder)
 library(shiny)
@@ -569,9 +573,23 @@ Covid_Col_Sums <- ncov_new_FINAL_data %>%
   subset(Date == "2020-03-23") %>%
   select(-Country_Region, -Date) %>% 
   colSums()
-  
 
+# 1.2 Creating Ranking table of countries
 
+Rank_Country_Table <- ncov_new_FINAL_data %>% 
+       subset(Date == "2020-03-23") %>% 
+       select(Country_Region, Cum_Confirmed_Country) %>% 
+     arrange(desc(Cum_Confirmed_Country)) %>%   
+      rename(Country = Country_Region,
+            Cases = Cum_Confirmed_Country )
+
+# 1.3 Filtering to the desired date of user to reveal map and creating colour pallet
+
+Map_Data <- ncov_new_Spatial %>% 
+  filter(Date == "2020-03-23")
+
+Countries_pal <- colorNumeric(palette = "Reds",
+                              domain = log(Map_Data$Cum_Confirmed_Country))
 
 
 
@@ -628,7 +646,7 @@ fluidRow(
                 width = 12)
   ),
   column(width = 3,
-         valueBox(subtitle = "Global infective cases",
+         valueBox(subtitle = "Global infected cases",
                 value = Covid_Col_Sums[[4]],
                 icon = icon("stethoscope"),
                 #color = "yellow",
@@ -642,11 +660,11 @@ fluidRow(
 
 fluidRow(
   
-  column(width = 9,
+  column(width = 8,
       leafletOutput("World_Map")
          ),
-  column(width = 3,
-         tableOutput("World_Table"))
+  column(width = 4,
+         dataTableOutput("World_Table"))
   
  )
         
@@ -666,20 +684,32 @@ server <- function(input, output){
   
 # World data tab
    output$World_Map <- renderLeaflet({
+     Map_Data %>% 
      leaflet() %>% 
-       addTiles()
+       addProviderTiles(provider = "CartoDB") %>%  
+       addPolygons(weight = 1,
+                   fillOpacity = 0.4,
+                   color = ~Countries_pal(log(Cum_Confirmed_Country)),
+                   popup = ~paste0("<b>", Country_Region, "</b>","<br/>",
+                                   "Cases:", Cum_Confirmed_Country,"<br/>",
+                                   "Deaths:", Deaths_Country, "<br/>",
+                                   "Recoveries:", Recovered_Country,"<br/>",
+                                   "Infected:", Infected_Country),
+                   highlight = highlightOptions(weight = 3,
+                                                color = "blue",
+                                                bringToFront = TRUE)
+       ) 
      
    })
    
+# Things to add to plot   
+# 1. SetMaxBounds() <-  the restrict the user from using only one world map
+# 2. addPopups Pop-ups
+# 3. ~ use to acess labels
+# 4. addResetMapButton() to reset teh map to its default position
+   
 # World table output
-   output$World_Table <- renderTable({
-     ncov_new_FINAL_data %>% 
-       subset(Date == "2020-03-23") %>% 
-       select(Country_Region, Cum_Confirmed_Country) %>% 
-     arrange(desc(Cum_Confirmed_Country)) %>% 
-       
-       
-   })
+   output$World_Table <- renderDataTable({Rank_Country_Table})
    
   
   
@@ -688,9 +718,28 @@ server <- function(input, output){
 shinyApp(ui = ui, server = server )
 
 
+```
+
+
+```{r Test if probelem is in join operation}
+
+previewColors(pal = Countries_pal,
+              values = c(100,500,1000,5000,10000,50000, 10000000))
+
 
 ```
 
+
+```{r}
+Map_Data %>% 
+leaflet() %>% 
+       addTiles() %>% 
+       addPolygons()
+       
+
+class(Map_Data$geometry)
+
+```
 
 **** Example ****
 
