@@ -47,8 +47,10 @@ knitr::opts_chunk$set(echo = TRUE)
 #install.packages("shinydashboard")
 #install.packages("gapminder")
 #install.packages("DT")
-install.packages("RColorBrewer")
+#install.packages("RColorBrewer")
+install.packages("shinyWidgets")
 
+library(shinyWidgets)
 library(RColorBrewer)
 library(DT)
 library(shinydashboard)
@@ -565,14 +567,27 @@ Part 2: Shiny app development
 
 # Steps:
 
-# 1 Code that will give the output for the dashboard
+# making icons
 
-# 1.1 Determining global count of each variable (Cumalative confirmed, deaths, recoveries etc.)
+Death_icon <- awesomeIcons(
+  icon = "times-circle",
+  iconColor = "black",
+  markerColor = "red",
+  library = "fa"
+  
+)
 
-Covid_Col_Sums <- ncov_new_FINAL_data %>%
-  subset(Date == "2020-03-23") %>%
-  select(-Country_Region, -Date) %>% 
-  colSums()
+Recovery_icon <- awesomeIcons(
+  icon = "ambulance",
+  iconColor = "black",
+  markerColor = "green",
+  library = "fa"
+  
+)
+
+
+
+
 
 # 1.2 Creating Ranking table of countries
 
@@ -590,6 +605,8 @@ Map_Data <- ncov_new_Spatial %>%
 
 Countries_pal <- colorNumeric(palette = "Reds",
                               domain = log(Map_Data$Cum_Confirmed_Country))
+
+# 1.4 Adding reactive variable 
 
 
 
@@ -612,7 +629,6 @@ tabName = "country_region_data")
  )
 )
   
-
 body <- dashboardBody(
   
 # Linking the tabs created in the sidebar to reflect in the body of the dashboard
@@ -623,70 +639,166 @@ tabItem(tabName = "world_data",
 fluidRow(
   
   column( width = 3,
-        valueBox(subtitle = "Global confirmed cases",
-                value = Covid_Col_Sums[[1]],
-                icon = icon(name = "globe"),
-                
-                width = 12)  
-    
+          valueBoxOutput("G_Confirmed_Cases",
+                         width = NULL
+          )
+          
   ),
   column( width = 3,
-          valueBox(subtitle = "Global deaths",
-                value = Covid_Col_Sums[[3]],
-                icon = icon("dizzy", lib = "font-awesome" ),
-               # color = "red",
-                width = 12)
-    
+          valueBoxOutput("G_deaths",
+                         width = NULL)
+          
   ),
   column(width = 3,
-         valueBox(subtitle = "Global recoveries",
-                value = Covid_Col_Sums[[2]],
-                icon = icon("clipboard-check"),
-               # color = "green",
-                width = 12)
+         valueBoxOutput("G_Recoveries",
+                        width = NULL)
   ),
+  
   column(width = 3,
-         valueBox(subtitle = "Global infected cases",
-                value = Covid_Col_Sums[[4]],
-                icon = icon("stethoscope"),
-                #color = "yellow",
-                width = 12)
-         )
+         valueBoxOutput("G_Infected",
+                        width = NULL)
+   )
   
   
 ),
-
-# Creating space for leaflet and table output 
 
 fluidRow(
+
+# Creating space for leaflet and table output 
   
-  column(width = 8,
-      leafletOutput("World_Map")
+  column(width = 12,
+      leafletOutput("World_Map", height = 700)
          ),
+ #  column(width = 3,
+ #         dataTableOutput("World_Table"))
+ #  
+  ),
+
+fluidRow(
   column(width = 4,
-         dataTableOutput("World_Table"))
+  setSliderColor("red", 1),    
+  sliderInput("date","Select data extraction date:",
+              min = as.Date("2020-01-22","%Y-%m-%d"),
+              max = as.Date("2020-03-23","%Y-%m-%d"),
+              value=as.Date("2020-03-23"),
+              timeFormat="%Y-%m-%d")
+            
+  ),
+  column(width = 4,
+         materialSwitch(inputId = "Top10Death",label =  "Top 10 death switch", status = "danger")),
   
+  column(width = 4,
+        materialSwitch(inputId = "Top10Recov",label =  "Top 10 Recoveries switch", status = "danger"))
+
+
  )
-        
 ),
+
 tabItem(tabName = "country_region_data",
 "The country data")
- )
+
+  
+
+   
+  )
 )
 
 
-
-ui <- dashboardPage(header, sidebar, body)
+ui <- dashboardPage(header, sidebar, body, skin = "black")
 
 
 
 server <- function(input, output){
+
+# Steps:  
   
-# World data tab
-   output$World_Map <- renderLeaflet({
-     Map_Data %>% 
-     leaflet() %>% 
-       addProviderTiles(provider = "CartoDB") %>%  
+# 1. Saving reactive variables to minimise duplication of code
+  
+# 1.1 Data set used for value box inputs  
+ncov_reactive_data <-  reactive({
+  ncov_new_FINAL_data %>% 
+    filter(Date == input$date)
+})
+
+# 1.2 Data set used for mapping leaflet map
+ncov_reactive_spatial_data <- ncov_new_Spatial
+
+# 2. Specifying value boc information
+
+# 2.1 Value box 1 output  
+output$G_Confirmed_Cases <- renderValueBox({
+  
+  Confirmed <-  ncov_reactive_data() %>% 
+    select(Cum_Confirmed_Country) %>% 
+    sum()
+  
+  valueBox(value = Confirmed,
+           subtitle = "Global confirmed cases",
+           icon = icon("globe"),
+                       color = "red")
+  })
+
+# 2.2 Value box 2 output
+output$G_deaths <- renderValueBox({
+  
+  Deaths <- ncov_reactive_data() %>% 
+    select(Deaths_Country) %>% 
+    sum()
+  
+  valueBox(value = Deaths,
+           subtitle = "Global deaths",
+           icon = icon("dizzy"),
+                       color = "red")
+})
+
+# 2.3 Value box 3 output
+
+output$G_Recoveries <- renderValueBox({
+  
+  Recoveries <- ncov_reactive_data() %>% 
+    select(Recovered_Country) %>% 
+    sum()
+  
+  valueBox(value = Recoveries,
+           subtitle = "Global recoveries",
+           icon = icon("clipboard-check"),
+                       color = "red")
+})
+
+# 2.4 Value box 4 output
+output$G_Infected <- renderValueBox({
+  
+  Infected <- ncov_reactive_data() %>% 
+    select(Infected_Country) %>% 
+    sum()
+  
+  valueBox(value = Infected,
+           subtitle = "Global infected cases",
+           icon = icon("stethoscope"),
+                       color = "red")
+})
+
+# 3. Specifying the details for world map output
+ 
+
+output$World_Map <- renderLeaflet({
+     
+Map_Data <- ncov_reactive_spatial_data %>% 
+  filter(Date == input$date)
+
+Top10Deaths <- ncov_new %>%
+  filter(Date == input$date) %>% 
+  arrange(desc(Deaths)) %>% 
+  head(10)
+
+Top10Recoveries <- ncov_new %>%
+  filter(Date == input$date) %>% 
+  arrange(desc(Recovered)) %>% 
+  head(10)
+     
+leaflet_Map <- Map_Data %>% 
+     leaflet(options = leafletOptions(minZoom = 2.5)) %>% 
+       addProviderTiles(provider = "CartoDB", options = providerTileOptions( noWrap = TRUE) ) %>%  
        addPolygons(weight = 1,
                    fillOpacity = 0.4,
                    color = ~Countries_pal(log(Cum_Confirmed_Country)),
@@ -698,48 +810,67 @@ server <- function(input, output){
                    highlight = highlightOptions(weight = 3,
                                                 color = "blue",
                                                 bringToFront = TRUE)
-       ) 
+       ) %>% 
+       setMaxBounds(lat1 = -90, lat2 = 90, lng1 = -180, lng2 = 180) %>% 
+       setView(lat = 8.0817, lng = 17.6078, zoom = 2.5)
+
+
+     
+     if(input$Top10Death){
+       leaflet_Map %>%
+         addAwesomeMarkers(lng = Top10Deaths$Long, lat = Top10Deaths$Lat, icon = Death_icon)
+        #popup = ~paste0("<b>","Deaths:", "</b>",Deaths)
+
+     }
+
+if(input$Top10Recov){
+  leaflet_Map %>%
+    addAwesomeMarkers(Top10Recoveries, lng = Top10Recoveries$Long, lat = Top10Recoveries$Lat, icon = Recovery_icon) 
+                      
+                      #popup = ~paste0("<b>","Recoveries:", "</b>",Recovered)
+
+
+}
+     
      
    })
    
-# Things to add to plot   
-# 1. SetMaxBounds() <-  the restrict the user from using only one world map
-# 2. addPopups Pop-ups
-# 3. ~ use to acess labels
-# 4. addResetMapButton() to reset teh map to its default position
-   
-# World table output
-   output$World_Table <- renderDataTable({Rank_Country_Table})
-   
-  
-  
+
 }
 
 shinyApp(ui = ui, server = server )
 
 
-```
-
-
-```{r Test if probelem is in join operation}
-
-previewColors(pal = Countries_pal,
-              values = c(100,500,1000,5000,10000,50000, 10000000))
-
+# thing to add
+# 4. addResetMapButton() to reset teh map to its default position
+   
+# World table output
+   # output$World_Table <- renderDataTable({Rank_Country_Table})
+   
+  
 
 ```
 
 
 ```{r}
-Map_Data %>% 
-leaflet() %>% 
-       addTiles() %>% 
-       addPolygons()
-       
 
-class(Map_Data$geometry)
+
+
+
+
+Top10Recoveries <- ncov_new %>%
+  filter(Date == "2020-03-23") %>% 
+  arrange(desc(Deaths)) %>% 
+  head(10)
+
+
+
+leaflet() %>% 
+  addTiles() %>% 
+  addAwesomeMarkers(lng = Top10Recoveries$Long, lat = Top10Recoveries$Lat, icon = Recovery_icon)
 
 ```
+
 
 **** Example ****
 
@@ -752,6 +883,12 @@ Remember the default figure width height is 6 x 4.5
 x <- rnorm(100)
 
 hist(x)
+
+ncov_new_FINAL_data %>%
+  filter(Date == "2020-03-23") %>% 
+  select(Cum_Confirmed_Country) %>%
+    sum()
+  
 
 
 ```
