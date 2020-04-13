@@ -48,7 +48,7 @@ knitr::opts_chunk$set(echo = TRUE)
 #install.packages("gapminder")
 #install.packages("DT")
 #install.packages("RColorBrewer")
-install.packages("shinyWidgets")
+#install.packages("shinyWidgets")
 
 library(shinyWidgets)
 library(RColorBrewer)
@@ -567,7 +567,7 @@ Part 2: Shiny app development
 
 # Steps:
 
-# making icons
+# 1. Saving variables that are going to be used in the shiny application
 
 Death_icon <- awesomeIcons(
   icon = "times-circle",
@@ -585,8 +585,10 @@ Recovery_icon <- awesomeIcons(
   
 )
 
+# Country names
 
 
+Country_Names <- levels(as.factor(ncov_new_FINAL_data$Country_Region))
 
 
 # 1.2 Creating Ranking table of countries
@@ -667,7 +669,7 @@ fluidRow(
 # Creating space for leaflet and table output 
   
   column(width = 12,
-      leafletOutput("World_Map", height = 700)
+      leafletOutput("World_Map")
          ),
  #  column(width = 3,
  #         dataTableOutput("World_Table"))
@@ -675,7 +677,7 @@ fluidRow(
   ),
 
 fluidRow(
-  column(width = 4,
+  column(width = 6,
   setSliderColor("red", 1),    
   sliderInput("date","Select data extraction date:",
               min = as.Date("2020-01-22","%Y-%m-%d"),
@@ -684,24 +686,63 @@ fluidRow(
               timeFormat="%Y-%m-%d")
             
   ),
-  column(width = 4,
-         materialSwitch(inputId = "Top10Death",label =  "Top 10 death switch", status = "danger")),
+
+  column(width = 6,
+         prettyRadioButtons(inputId = "topTen", 
+                            label = "Additional information w.r.t chosen date:",
+                            choices = c("Normal world map", "Top ten regions with highest death count", "Top ten regions with the higest recovery count"),
+                          shape = "round", 
+                          status = "danger",
+                          fill = TRUE, 
+                          animation = "pulse")
+                     
+                     )  
   
-  column(width = 4,
-        materialSwitch(inputId = "Top10Recov",label =  "Top 10 Recoveries switch", status = "danger"))
+  
+  # column(width = 4,
+  #        materialSwitch(inputId = "Top10Death",label =  "Top 10 death switch", status = "danger")),
+  # 
+  # column(width = 4,
+  #       materialSwitch(inputId = "Top10Recov",label =  "Top 10 Recoveries switch", status = "danger"))
 
 
  )
 ),
 
 tabItem(tabName = "country_region_data",
-"The country data")
+        
+        sidebarLayout(
+          sidebarPanel(
+            
+            selectInput(inputId = "country",
+                        "Select a country:",
+                        choices = Country_Names,
+                        selected = "South Africa",
+                        multiple = TRUE),
+            prettyRadioButtons(inputId = "DataSelection",
+                          label = "Select data input", 
+                          icon = icon("check-circle"),
+                          choiceNames = c("Cummalative cases", "Deaths", "Recoveries", "Infected"),
+                          choiceValues = c("Cum_Confirmed", "Deaths", "Recovered", "Infected"),
+                          selected = "Cum_Confirmed",
+                          animation = "tada", 
+                          status = "danger")
+            
+          ),
+          
+          
+          
+          mainPanel(
+            plotlyOutput("countryPlot")
+          )
+          
+        )
+        
 
-  
-
-   
+        
+   )
   )
-)
+ )
 
 
 ui <- dashboardPage(header, sidebar, body, skin = "black")
@@ -720,10 +761,10 @@ ncov_reactive_data <-  reactive({
     filter(Date == input$date)
 })
 
-# 1.2 Data set used for mapping leaflet map
-ncov_reactive_spatial_data <- ncov_new_Spatial
+#
 
-# 2. Specifying value boc information
+
+# 2. Specifying value box information
 
 # 2.1 Value box 1 output  
 output$G_Confirmed_Cases <- renderValueBox({
@@ -734,7 +775,7 @@ output$G_Confirmed_Cases <- renderValueBox({
   
   valueBox(value = Confirmed,
            subtitle = "Global confirmed cases",
-           icon = icon("globe"),
+           icon = icon("globe", lib = "glyphicon"),
                        color = "red")
   })
 
@@ -747,7 +788,7 @@ output$G_deaths <- renderValueBox({
   
   valueBox(value = Deaths,
            subtitle = "Global deaths",
-           icon = icon("dizzy"),
+           icon = icon("remove-sign", lib = "glyphicon"),
                        color = "red")
 })
 
@@ -761,7 +802,7 @@ output$G_Recoveries <- renderValueBox({
   
   valueBox(value = Recoveries,
            subtitle = "Global recoveries",
-           icon = icon("clipboard-check"),
+           icon = icon("heart", lib = "glyphicon"),
                        color = "red")
 })
 
@@ -774,33 +815,35 @@ output$G_Infected <- renderValueBox({
   
   valueBox(value = Infected,
            subtitle = "Global infected cases",
-           icon = icon("stethoscope"),
+           icon = icon("stethoscope", lib = "font-awesome"),
                        color = "red")
 })
 
-# 3. Specifying the details for world map output
+# 3. Output for world map
  
 
-output$World_Map <- renderLeaflet({
-     
-Map_Data <- ncov_reactive_spatial_data %>% 
-  filter(Date == input$date)
-
-Top10Deaths <- ncov_new %>%
+output$World_Map <- renderLeaflet({ 
+  
+  Top10Deaths <- ncov_new %>%
   filter(Date == input$date) %>% 
   arrange(desc(Deaths)) %>% 
-  head(10)
-
-Top10Recoveries <- ncov_new %>%
+  head(10) %>% 
+  mutate(Rank = seq(1,10, by = 1))
+  
+  Top10Recoveries <- ncov_new %>%
   filter(Date == input$date) %>% 
   arrange(desc(Recovered)) %>% 
-  head(10)
-     
-leaflet_Map <- Map_Data %>% 
+  head(10) %>% 
+  mutate(Rank = seq(1,10, by = 1))
+  
+  
+  
+  L_World_Map <- ncov_new_Spatial %>%
+    filter(Date == input$date) %>% 
      leaflet(options = leafletOptions(minZoom = 2.5)) %>% 
-       addProviderTiles(provider = "CartoDB", options = providerTileOptions( noWrap = TRUE) ) %>%  
+       addProviderTiles(provider = "CartoDB.Positron", options = providerTileOptions( noWrap = TRUE) ) %>%  
        addPolygons(weight = 1,
-                   fillOpacity = 0.4,
+                   fillOpacity = 0.2,
                    color = ~Countries_pal(log(Cum_Confirmed_Country)),
                    popup = ~paste0("<b>", Country_Region, "</b>","<br/>",
                                    "Cases:", Cum_Confirmed_Country,"<br/>",
@@ -808,33 +851,81 @@ leaflet_Map <- Map_Data %>%
                                    "Recoveries:", Recovered_Country,"<br/>",
                                    "Infected:", Infected_Country),
                    highlight = highlightOptions(weight = 3,
-                                                color = "blue",
+                                                color = "red",
                                                 bringToFront = TRUE)
        ) %>% 
        setMaxBounds(lat1 = -90, lat2 = 90, lng1 = -180, lng2 = 180) %>% 
        setView(lat = 8.0817, lng = 17.6078, zoom = 2.5)
+  
+   if(input$topTen == "Normal world map") {
+    
+    L_World_Map
+    
+  }
+  
+  if(input$topTen == "Top ten regions with highest death count") {
+  
+    L_World_Map <- L_World_Map %>% 
+      addAwesomeMarkers(lng = Top10Deaths$Long, lat = Top10Deaths$Lat, icon = Death_icon, popup = ~paste0("<b>","Rank:",Top10Deaths$Rank,"</b>","<br/>","<b>","Deaths:", "</b>",Top10Deaths$Deaths))
+    
+  }
+  
+  if(input$topTen == "Top ten regions with the higest recovery count") {
+    
+   L_World_Map <- L_World_Map %>% 
+      addAwesomeMarkers(lng = Top10Recoveries$Long, lat = Top10Recoveries$Lat, icon = Recovery_icon, popup = ~paste0("<b>","Rank:", Top10Recoveries$Rank,"</b>", "<br/>","<b>","Recoveries:", "</b>",Top10Recoveries$Recovered))
+    
+  }
+  
+  L_World_Map
+  
+
+  })
+
+# 4. Plotly output
 
 
-     
-     if(input$Top10Death){
-       leaflet_Map %>%
-         addAwesomeMarkers(lng = Top10Deaths$Long, lat = Top10Deaths$Lat, icon = Death_icon)
-        #popup = ~paste0("<b>","Deaths:", "</b>",Deaths)
+output$countryPlot <- renderPlotly({
+  
+  data <- ncov_new %>% 
+    filter(Country_Region %in% input$country) 
+  
+  
+if(input$DataSelection == "Cum_Confirmed") {
+  
 
-     }
-
-if(input$Top10Recov){
-  leaflet_Map %>%
-    addAwesomeMarkers(Top10Recoveries, lng = Top10Recoveries$Long, lat = Top10Recoveries$Lat, icon = Recovery_icon) 
-                      
-                      #popup = ~paste0("<b>","Recoveries:", "</b>",Recovered)
-
-
+  Plot <- ggplot(data, aes(x = Date, y = Cum_Confirmed)) +
+    geom_point(aes(color = Country_Region)) +
+    labs(y = "Cummalative cases") +
+    theme(legend.title = element_blank())
 }
-     
-     
-   })
-   
+  
+if(input$DataSelection == "Deaths") {
+  Plot <- ggplot(data, aes(x = Date, y = Deaths)) +
+    geom_point(aes(color = Country_Region)) +
+    labs(y = "Deaths count") +
+    theme(legend.title = element_blank())
+}
+
+if(input$DataSelection == "Recovered") {
+  Plot <- ggplot(data, aes(x = Date, y = Recovered)) +
+    geom_point(aes(color = Country_Region)) +
+    labs(y = "Recovered count") +
+    theme(legend.title = element_blank())
+}
+  
+if(input$DataSelection == "Infected") {
+  Plot <- ggplot(data, aes(x = Date, y = Deaths)) +
+    geom_point(aes(color = Country_Region)) +
+    labs(y = "Infected count") +
+    theme(legend.title = element_blank())  
+}
+  
+  Plot
+  
+})
+
+
 
 }
 
@@ -847,27 +938,73 @@ shinyApp(ui = ui, server = server )
 # World table output
    # output$World_Table <- renderDataTable({Rank_Country_Table})
    
-  
+
+```
+
+```{r Shiny example}
+ui <- fluidPage(
+  tags$h1("Pretty radio buttons"),
+  br(),
+
+  fluidRow(
+    column(
+      width = 4,
+      prettyRadioButtons(inputId = "radio1",
+                          label = "Click me!",
+                          choices = c("Click me !", "Me !", "Or me !")),
+      verbatimTextOutput(outputId = "res1"),
+      br(),
+      prettyRadioButtons(inputId = "radio4",  label = "Click me!",
+                          choices = c("Click me !", "Me !", "Or me !"),
+                          outline = TRUE,
+                          plain = TRUE, icon = icon("thumbs-up")),
+      verbatimTextOutput(outputId = "res4")
+    ),
+    column(
+      width = 4,
+      prettyRadioButtons(inputId = "radio2",
+                          label = "Click me!", thick = TRUE,
+                          choices = c("Click me !", "Me !", "Or me !"),
+                          animation = "pulse", status = "info"),
+      verbatimTextOutput(outputId = "res2"),
+      br(),
+      prettyRadioButtons(inputId = "radio5",
+                          label = "Click me!", icon = icon("check"),
+                          choices = c("Click me !", "Me !", "Or me !"),
+                          animation = "tada", status = "default"),
+      verbatimTextOutput(outputId = "res5")
+    ),
+    column(
+      width = 4,
+      prettyRadioButtons(inputId = "radio3",  label = "Click me!",
+                          choices = c("Click me !", "Me !", "Or me !"),
+                          shape = "round", status = "danger",
+                          fill = TRUE, inline = TRUE),
+      verbatimTextOutput(outputId = "res3")
+    )
+  )
+
+)
+
+server <- function(input, output, session) {
+
+  output$res1 <- renderPrint(input$radio1)
+  output$res2 <- renderPrint(input$radio2)
+  output$res3 <- renderPrint(input$radio3)
+  output$res4 <- renderPrint(input$radio4)
+  output$res5 <- renderPrint(input$radio5)
+
+}
+
+shinyApp(ui, server)
 
 ```
 
 
 ```{r}
-
-
-
-
-
-Top10Recoveries <- ncov_new %>%
-  filter(Date == "2020-03-23") %>% 
-  arrange(desc(Deaths)) %>% 
-  head(10)
-
-
-
-leaflet() %>% 
-  addTiles() %>% 
-  addAwesomeMarkers(lng = Top10Recoveries$Long, lat = Top10Recoveries$Lat, icon = Recovery_icon)
+ leaflet() %>% 
+  addProviderTiles(provider = "Thunderforest.TransportDark")
+  
 
 ```
 
