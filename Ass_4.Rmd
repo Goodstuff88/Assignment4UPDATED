@@ -21,65 +21,83 @@ knitr::opts_chunk$set(echo = TRUE)
 
 \pagebreak
 
-```{r installing packages, include=FALSE}
+```{r Installing packages, include=FALSE}
 
-#Steps:
+# Steps:
 
-# 1. Installing packages used for analysis :
+# 1. Installing packages used for analysis:
+
+# 1.1 General use
 
 #install.packages("tidyverse")
 #install.packages("remotes")
 #install.packages("rgdal")
+#install.packages("devtools")
+#install.packages("RColorBrewer")
+#install.packages("ggedit")
+#install.packages("caTools")
+#install.packages("plotly")
+#install.packages("gridExtra")
+#install.packages("egg")
+install.packages("cowplot")
+
+library(cowplot)
+library(tidyverse)
+library(remotes)
+library(rgdal)
+library(devtools)
+library(RColorBrewer)
+library(ggedit)
+library(caTools)
+library(plotly)
+library(gridExtra)
+library(egg)
+
+# 1.2 Mapping data and working with spatial objects
+
 #install.packages("spdplyr")
 #install.packages("sf")
 #install.packages("countrycode")
 #install.packages("ggmap")
 #install.packages("rnaturalearth")
 #install.packages("rnaturalearthdata")
-#install.packages("gganimate")
 #install.packages("mapdata")
-#install.packages("devtools")
-#install.packages("Rtools")
-#devtools::install_github("thomasp85/gganimate/releases/tag/v0.1.1", force = TRUE)
-# install.packages("gifski")
-#install.packages("caTools")
-#install.packages("shiny")
-#install.packages("shinydashboard")
-#install.packages("gapminder")
-#install.packages("DT")
-#install.packages("RColorBrewer")
-#install.packages("shinyWidgets")
+#intall,packages("leaflet")
 
-library(shinyWidgets)
-library(RColorBrewer)
-library(DT)
-library(shinydashboard)
-library(gapminder)
-library(shiny)
-library(caTools)
-library(gifski)
-library(devtools)
-library(tidyverse)
-library(remotes)
-library(plotly)
-library(leaflet)
-library(rgdal)
 library(spdplyr)
 library(sf)
 library(countrycode)
 library(ggmap)
 library(rnaturalearth)
 library(rnaturalearthdata)
-library(rnaturalearthhires)
-library(gganimate)
+library(leaflet)
 library(mapdata)
 
+# 1.3 Creating animations
 
-# 2. Installing packages used to get corona virus data set
+#install.packages("gganimate")
+#install.packages("gifski")
 
-#remotes::install_github('pzhaonet/ncovr')
-#install.packages("ncovr")
-#library(ncovr)
+
+library(gifski)
+library(gganimate)
+
+# 1.4 Creating Shiny dashboard
+
+
+#install.packages("shiny")
+#install.packages("shinydashboard")
+#install.packages("DT")
+#install.packages("shinyWidgets")
+#install.packages("shinybusy")
+
+
+
+library(shinybusy)
+library(shinyWidgets)
+library(shinydashboard)
+library(DT)
+library(shiny)
 
 ```
 
@@ -94,18 +112,23 @@ As mentioned in section \ref{DW section} the first step of data wrangling is imp
 
 ***** START CODE - for reproduceability *****
 
-```{r Loading new ncov data}
+```{r Loading covid 19 data}
 
-# Loading latest data (not going to be used for analysis)
+# Note: The original data file will be attached for reproducability.
 
-# ncov_new <- read.csv("https://raw.githubusercontent.com/datasets/covid-19/master/data/time-series-19-covid-combined.csv")
+# Steps:
 
-# Loading the data up to the 23/03/2020
+# 1. Loading data 
 
-# For reproduceability
 
-ncov_new <- read.csv(file = "time_series_19_covid_combined_23_03_2020.csv", stringsAsFactors = FALSE)
+# 1.1 Covid 19 data up to the 23/03/2020 (Most code written for this data set)
 
+# ncov_new <- read.csv(file = "time_series_19_covid_combined_23_03_2020.csv", stringsAsFactors = FALSE)
+
+
+# 1.2 Covid 19 data up to the 15/04/2020 (Test data set)
+
+ncov_new <- read.csv(file = "time_series_19_covid_combined_15_04_2020.csv", stringsAsFactors = FALSE)
 
 ```
 
@@ -125,7 +148,7 @@ glimpse(ncov_new)
 
 str(ncov_new)
 
-# Remark: The "Date" variable should of type date not factor:
+# Remark: The "Date" variable should of type date not character:
 
 
 # 2. Checking for NA values in data set
@@ -139,23 +162,26 @@ sum(is.na(ncov_new$Confirmed))
 sum(is.na(ncov_new$Recovered))
 sum(is.na(ncov_new$Deaths))
 
-# Remark: Seems as if there is only missing values in the "Recovered" variable
+# Remark: The "Confirmed" and Deaths variables seem to have missing values
 
-# 3. Looking at missing value instances
-
-ncov_new %>% 
-  filter(is.na(Recovered))
-
-# 3.1 Replace NA values with 0
-
-ncov_new$Recovered[is.na(ncov_new$Recovered)] <- 0
+# 2.1 Looking at missing value instances
 
 ncov_new %>% 
-  filter(is.na(Recovered))
+  filter(is.na(Confirmed))
+
+# Remark: It seems to be associated with a sertain location in Canada. The "Recovered" variable is populated but not the "Deaths" or "Confirmed" variables. It would be best to totally ignore these instances since they offer no value. All three variables need to be known for data to be useful.
+
+# 3. Remove instances with NA values
+
+ncov_new <- na.omit(ncov_new)
+
 
 ```
 
+
 ```{r Additions and transformations to data set}
+
+# Steps:
 
 # 1. Changing the format of the "Date" variable
 
@@ -181,52 +207,52 @@ ncov_new <- ncov_new %>%
 
 # Note: The following spatial data was obtained by installing the naturalearth packages.
 
-# Loading of the world data 
+# Steps:
+
+# 1. Loading of the world data (spatial object) 
 
 World <- ne_countries(scale = "medium", returnclass = "sf")
   
-
 ```
 
 
 ```{r Making neccessary changes to accomplish merging of ncov_new and World data frames}
 
-# Note: The "Country_Region" variable will be used to join the spatial data frame (obtained by the rnaturalearth packages) and the ncov_new data frame. Therfore, a geometry variable will be added to the ncov_new data frame.  
+# Note: The "Country_Region" variable will be used to join the spatial data frame ("World") and the ncov_new data frame. Therfore, a geometry variable will be added to the ncov_new data frame.  
 
 # Steps:
 
 # 1. Testing to see which country names do NOT coincide between the two data frames.
 
-# 1.1 Creating a data frame (World_df) that list all the countries of the natural earth data.
+# 1.1 Creating a data frame (World_df) that list all the countries of the natural earth data.The "pop_est" variable will be used later on for testing purpose.
 
 World_df <- data.frame( Country_Region = World$name_long,
-                        Pop_Estimate = World$pop_est
-)
+                        Pop_Estimate = World$pop_est)
 
 
-# 1.2 Joining the ncov_new data frame with the World_df date frame to investigate cases where Pop_Estimate is NA (i.e to investigate where there is a mis match in country names)
+# 1.2 Joining the ncov_new data frame with the World_df date frame to investigate cases where "pop_est" is NA (i.e to investigate where there is a mis match in country names)
 
 Country_Test_df <- left_join(ncov_new, World_df, by = "Country_Region" )
 
-sum(is.na(Country_Test_df$Pop_Estimate))
 
-# Remark: There is NA's present. These country names that cause this should be investigated
+# Remark: There are NA's present. These country names that cause this will be investigated.
 
 # 1.3 Investigation of the countries that present NA values
 
- Mismatch_Countries <- filter(Country_Test_df, is.na(Pop_Estimate)) %>%
-  group_by(Country_Region) %>%
-  summarise(count = n())
+ Mismatch_Countries <- Country_Test_df %>%  
+   filter(is.na(Pop_Estimate)) %>%
+   group_by(Country_Region) %>%
+   summarise(count = n())
 
- # Remark: Luckily, there is only 15 counties that does not cooincide. These countries will be manually renamed so that they can be merged successfully.  
+ # Remark: Luckily, there is only 20 counties that does not coincide. These countries will be manually renamed so that they can be merged successfully.  
  
-# 1.4  Change the following names of the ncov_new data set. ("old name" -> "new name")
+# 1.4  Change the following names of the ncov_new data set. Format: "old name" -> "new name"
 
 # 1. Brunei -> Brunei Darussalam 
 # 2. Congo (Brazzaville) -> Republic of the Congo
 # 3. Congo (Kinshasa) -> Democratic Republic of the Congo
 # 4. Cote d'Ivoire -> Côte d'Ivoire 
-# 5. Cruise Ship -> Japan 
+# 5. Diamond Princess -> Japan 
 # 6. Czechia -> Czech Republic 
 # 7. Eswatini -> eSwati
 # 8. Gambia, The ->The Gambia
@@ -237,6 +263,11 @@ sum(is.na(Country_Test_df$Pop_Estimate))
 # 13. Taiwan* -> Taiwan 
 # 14. US -> United States 
 # 15. Cabo Verde -> Republic of Cabo Verde 
+# 16. Burma -> Myanmar 
+# 17. Laos -> Lao PDR
+# 18. MS Zaandam -> Bahamas
+# 19. Sao Tome and Principe -> 	São Tomé and Principe
+# 20. West Bank and Gaza -> Palestine
 
 ncov_new$Country_Region[ncov_new$Country_Region == "Brunei"] <- "Brunei Darussalam"
 
@@ -246,7 +277,7 @@ ncov_new$Country_Region[ncov_new$Country_Region == "Congo (Kinshasa)"] <- "Democ
 
 ncov_new$Country_Region[ncov_new$Country_Region == "Cote d'Ivoire"] <- "Côte d'Ivoire"
 
-ncov_new$Country_Region[ncov_new$Country_Region == "Cruise Ship"] <- "Japan"
+ncov_new$Country_Region[ncov_new$Country_Region == "Diamond Princess"] <- "Japan"
 
 ncov_new$Country_Region[ncov_new$Country_Region == "Czechia"] <- "Czech Republic"
 
@@ -268,18 +299,26 @@ ncov_new$Country_Region[ncov_new$Country_Region == "North Macedonia"] <- "Macedo
 
 ncov_new$Country_Region[ncov_new$Country_Region == "Taiwan*"] <- "Taiwan" 
 
+ncov_new$Country_Region[ncov_new$Country_Region == "Burma"] <- "Myanmar"
+
+ncov_new$Country_Region[ncov_new$Country_Region == "Laos"] <- "Lao PDR" 
+
+ncov_new$Country_Region[ncov_new$Country_Region == "MS Zaandam"] <- "Bahamas" 
+
+ncov_new$Country_Region[ncov_new$Country_Region == "West Bank and Gaza"] <- "Palestine" 
+
+ncov_new$Country_Region[ncov_new$Country_Region == "Sao Tome and Principe"] <- "São Tomé and Principe" 
+
 
 # 1.5 Re-joining the Country_Test_df with changed country names
 
-Country_Test_df <- left_join(ncov_new, World_df, by = "Country_Region" )
-
-sum(is.na(Country_Test_df$Pop_Estimate))
+Country_Test_df <- left_join(ncov_new, World_df, by = "Country_Region")
 
 
-# Remark: There are no missing values, therefore ALL the country names of the ncov_new data set and the spatial data set coincides and the ACTUAL merging of features can continue.
+# Remark: All the country names of the ncov_new data set and the spatial data set will coincide. The merging of the spatial features can continue.
 
 
-# 2. Creating Spatial data frame that only contains the important features from the world data set and storing in World_Merge_df. The spatial data frame will be used in the merging operation in the next code chunk.
+# 2. Creating Spatial data frame that only contains the important features from the world data set and storing in "World_Merge_df". This spatial data frame will be used in the merging operation in the next code chunk.
 
 World_Merge_df <- World %>% 
   select(name_long,continent) %>%
@@ -290,13 +329,12 @@ World_Merge_df <- World %>%
 
 ```{r Merging operation of spatial data}
 
-# The following code chunk deals with creating a data frame that contains the nessecceray data that will be used to create plots of a world map.
+# Note: The following code chunk deals with creating a data frame that contains the nessecceray data that will be used to create plots of a world map.
 
 
 # Steps:
 
-# 1. Creating the data frame that encapsulates all the data needed for creating the animation. The data frame basically gives a count summary of each country in the data set per day (from 2020-01-22 to 2020-03-23) 
-
+# 1. Creating a data frame that summarises the data for each country per day. 
 
 ncov_new_FINAL_data <-  ncov_new %>% 
   group_by(Date, Country_Region) %>% 
@@ -306,251 +344,339 @@ ncov_new_FINAL_data <-  ncov_new %>%
             Infected_Country = sum(Infected)) %>% 
   as.data.frame()
 
+# Remark: The Province_State varibale was ignored in the analysis since most of the values were missing.
 
-# 1.1 Changing Some variables that are type double to integer
- 
-ncov_new_FINAL_data$Recovered_Country <- as.integer(ncov_new_FINAL_data$Recovered_Country)
-ncov_new_FINAL_data$Infected_Country <- as.integer(ncov_new_FINAL_data$Infected_Country)
-
-
-# 2. Merging of data with Spatial data from the natureal earth packages
+# 2. Merge data frame (ncov_new_FINAL_data) with Spatial data frame (World_Merde_df)
 
 ncov_new_Spatial <- left_join(ncov_new_FINAL_data, World_Merge_df , by = "Country_Region")
 
-# 2.1 Classifying the geometry feature in data frame
+# 3. Classifying the geometry feature in data frame.The data frame will then have a class "data frame" and "sf" instead of just a "data frame"
 
 st_geometry(ncov_new_Spatial) <- ncov_new_Spatial$geometry
-
 
 ```
 
 
 \section{Visualisations}
 
-Part 1 - Animation
+\subsection{Part 1 - Animation development}
 
-```{r  Creating animation for "slide show" creation}
 
-# Note: The following code will be associated with creating animations that will be used in the final slide show
+```{r  Creating an animation of the world map}
 
-World %>% 
-  st_set_geometry(value = NULL) %>% 
-  group_by(continent) %>% 
-  summarise(n = n())
+# Note: The following code blocks will be associated with creating an animations to give insight on the spread of covid 19 gloabally. Creating a single animation of the world map, showing the cumalative cases of covid 19 is insightful, but there is a lack in detail. Therefore it was decided to make multiple animations (gifs) and zooming into areas of intrest to observe more detail.  
 
 # Steps: 
 
-# 1) Creating World map gif
+# 1. Specifying the position of the labels for each country (counting the number of cases as the date progresses)
 
 World_points<- st_centroid(ncov_new_Spatial)
-World_points <- cbind(ncov_new_Spatial, st_coordinates(st_centroid(ncov_new_Spatial$geometry)))
+World_points <- cbind(ncov_new_Spatial,
+                      st_coordinates(st_centroid(ncov_new_Spatial$geometry)))
 
 
- World_Map <- ggplot()  +
+# 2. Plotting world map using ggplot()
+
+ World_Map <- ggplot() +
    geom_sf(data = World, fill = "gray48") + 
    geom_sf(data = ncov_new_Spatial, aes(frame = Date, fill = Cum_Confirmed_Country)) +
-    scale_fill_gradient(low="white", high="red", trans = "log10") + 
-   labs(title = "Cumalative confirmed cases of covid 19 - World Map", subtitle = "Date: {current_frame}", x = "Latitude",
-       y = "Longitude", fill = "Count") + 
+   scale_fill_gradient(low="white", high="red", trans = "log10") + 
+   labs(title = "Cumalative confirmed cases of covid 19 - World Map", subtitle = "Date:{current_frame}", x = "Latitude",y = "Longitude", fill = "Count") + 
    theme(plot.title = element_text(size = 14, face = "bold"), 
          panel.grid.major = element_line(color = "gray65", linetype = "dashed", size = 0.5), panel.background = element_rect(fill = "aliceblue"))
    
 
+# 3. Creating a gganim object
+ 
 World_Map_anim <-  World_Map + transition_manual(Date)
+
+# 4. Creating gif
 
 World_Map_Gif <- animate(World_Map_anim, fps = 5, width = 950, height = 850)
 
+# 5. Saving the gif created (Maybe should not insert)
+
 anim_save("1.World_Map.gif", animation = World_Map_Gif, path = "C:/Users/Gustav/Desktop/MSc Data Science 1st year/Exploratory data analysis/Assignments/Assignment4" )
+```
 
 
-# 2) Africa gif
+```{r Creating an animation for Africa}
 
-ncov_new_Spatial_Afr <- ncov_new_Spatial %>% 
+# Steps:
+
+# 1. Filtering the spatial data frame to only retrieve information about Africa
+
+ncov_new_Spatial_Afr <- ncov_new_Spatial %>%
   filter(continent == "Africa")
 
-World_Points_Afr <- st_centroid(ncov_new_Spatial_Afr)
+# 2. Specifying the position of the labels for each country in Africa (counting the number of cases as the date progresses)
 
-World_Points_Afr <- cbind(ncov_new_Spatial_Afr, st_coordinates(st_centroid(ncov_new_Spatial_Afr$geometry)))
+World_Points_Afr <- st_centroid(ncov_new_Spatial_Afr)
+World_Points_Afr <- cbind(ncov_new_Spatial_Afr,
+                          st_coordinates(st_centroid(ncov_new_Spatial_Afr$geometry)))
+
+
+# 3. Getting data for base map (Africa countries)
 
 Africa_data <- World %>% 
   filter(continent == "Africa")
+
+# 4. Plotting Africa map using ggplot()
 
 Map_Afr <- ggplot() + 
   geom_sf(data = Africa_data, fill = "gray48" ) +
   geom_sf(data = ncov_new_Spatial_Afr, aes(frame = Date, fill = Cum_Confirmed_Country)) +
   scale_fill_gradient(low="white", high="red", trans = "log10") +
-  geom_text(data = World_Points_Afr, aes(x = X, y = Y, label = Cum_Confirmed_Country), check_overlap = FALSE) + labs(title = "Cumalative confirmed cases of covid 19 - Africa", subtitle = "Date: {current_frame}", fill = "Count", x = "Latitude", y = "Longitude" ) + 
+  geom_text(data = World_Points_Afr, aes(x = X, y = Y, label = Cum_Confirmed_Country), check_overlap = FALSE) + 
+  labs(title = "Cumalative confirmed cases of covid 19 - Africa", subtitle = "Date: {current_frame}", fill = "Count", x = "Latitude", y = "Longitude" ) + 
   theme(title = element_text(size = 14, face = "bold"), panel.grid.major = element_line(color = "gray65", linetype = "dashed", size = 0.5), panel.background = element_rect(fill = "aliceblue"))
-  
-Map_Afr_Anim <-  Map_Afr  + 
-  transition_manual(Date)
+ 
+# 5. Creating a gganim object
+ 
+Map_Afr_Anim <-  Map_Afr + transition_manual(Date)
+
+# 6. Creating gif
 
 Afr_Gif <-  animate(Map_Afr_Anim, fps = 5, width = 950, height = 750)
 
+# 7. Saving the gif created (Maybe should not insert)
+
 anim_save("2.Afr.gif", animation = Afr_Gif, path = "C:/Users/Gustav/Desktop/MSc Data Science 1st year/Exploratory data analysis/Assignments/Assignment4" )
 
-# 3) Europe gif
+```
+
+
+```{r Creating an animation for Europe}
+
+# Steps:
+
+# 1. Filtering the spatial data frame to only retrieve information about Europe
 
 ncov_new_Spatial_Eur <- ncov_new_Spatial %>% 
   filter(continent == "Europe")
 
-World_Points_Eur <- st_centroid(ncov_new_Spatial_Eur)
+# 2. Specifying the position of the labels for each country in Africa (counting the number of cases as the date progresses)
 
-World_Points_Eur <- cbind(ncov_new_Spatial_Eur, st_coordinates(st_centroid(ncov_new_Spatial_Eur$geometry)))
+World_Points_Eur <- st_centroid(ncov_new_Spatial_Eur)
+World_Points_Eur <- cbind(ncov_new_Spatial_Eur,
+                          st_coordinates(st_centroid(ncov_new_Spatial_Eur$geometry)))
+
+# 3. Getting data for base map (Europe countries)
 
 Europe_data <- World %>% 
   filter(continent == "Europe")
+
+# 4. Plotting Europe map using ggplot() 
 
 Map_Eur <- ggplot() + 
   geom_sf(data = Europe_data, fill = "gray48") +
   geom_sf(data = ncov_new_Spatial_Eur, aes(frame = Date, fill = Cum_Confirmed_Country)) +
   coord_sf(xlim = c(-40, 100), ylim = c(30,75), expand = FALSE) +
   scale_fill_gradient(low="white", high="red", trans = "log10") +
-  geom_text(data = World_Points_Eur, aes(x = X, y = Y, label = Cum_Confirmed_Country), check_overlap = FALSE) + labs(title = "Cumalative confirmed cases of covid 19 - Europe", subtitle = "Date: {current_frame}", fill = "Count", x = "Latitude", y = "Longitude" ) + 
+  geom_text(data = World_Points_Eur, aes(x = X, y = Y, label = Cum_Confirmed_Country), check_overlap = FALSE) + 
+  labs(title = "Cumalative confirmed cases of covid 19 - Europe", subtitle = "Date: {current_frame}", fill = "Count", x = "Latitude", y = "Longitude" ) + 
   theme(title = element_text(size = 14, face = "bold"), panel.grid.major = element_line(color = "gray65", linetype = "dashed", size = 0.5), panel.background = element_rect(fill = "aliceblue"))
+
+# 5. Creating a gganim object
   
 Map_Eur_Anim <-  Map_Eur  + 
   transition_manual(Date)
 
+# 6. Creating gif 
+
 Eur_Gif <-  animate(Map_Eur_Anim, fps = 5, width = 950, height = 750)
 
+# 7. Saving the gif created (Maybe should not insert)
+
 anim_save("3.Eur.gif", animation = Eur_Gif, path = "C:/Users/Gustav/Desktop/MSc Data Science 1st year/Exploratory data analysis/Assignments/Assignment4" )
+```
 
 
-# 4) Asia gif
+```{r Creating an animation for Asia}
+
+# Steps:
+
+# 1. Filtering the spatial data frame to only retrieve information about Asia 
 
 ncov_new_Spatial_Asia <- ncov_new_Spatial %>% 
   filter(continent == "Asia")
 
-World_Points_Asia <- st_centroid(ncov_new_Spatial_Asia)
+# 2. Specifying the position of the labels for each country in Asia (counting the number of cases as the date progresses) 
 
-World_Points_Asia <- cbind(ncov_new_Spatial_Asia, st_coordinates(st_centroid(ncov_new_Spatial_Asia$geometry)))
+World_Points_Asia <- st_centroid(ncov_new_Spatial_Asia)
+World_Points_Asia <- cbind(ncov_new_Spatial_Asia,
+                           st_coordinates(st_centroid(ncov_new_Spatial_Asia$geometry)))
+
+# 3. Getting data for base map (Asia countries)
 
 Asia_data <- World %>% 
   filter(continent == "Asia")
+
+# 4. Plotting Asia map using ggplot()  
 
 Map_Asia <- ggplot() + 
   geom_sf(data = Asia_data, fill = "gray48") +
   geom_sf(data = ncov_new_Spatial_Asia, aes(frame = Date, fill = Cum_Confirmed_Country)) +
   scale_fill_gradient(low="white", high="red", trans = "log10") +
-  geom_text(data = World_Points_Asia, aes(x = X, y = Y, label = Cum_Confirmed_Country), check_overlap = FALSE) + labs(title = "Cumalative confirmed cases of covid 19 - Asia", subtitle = "Date: {current_frame}", fill = "Count", x = "Latitude", y = "Longitude" ) + 
+  geom_text(data = World_Points_Asia, aes(x = X, y = Y, label = Cum_Confirmed_Country), check_overlap = FALSE) + 
+  labs(title = "Cumalative confirmed cases of covid 19 - Asia", subtitle = "Date: {current_frame}", fill = "Count", x = "Latitude", y = "Longitude" ) + 
   theme(title = element_text(size = 14, face = "bold"), panel.grid.major = element_line(color = "gray65", linetype = "dashed", size = 0.5), panel.background = element_rect(fill = "aliceblue"))
-  
+
+# 5. Creating a gganim object
+
 Map_Asia_Anim <-  Map_Asia  + 
   transition_manual(Date)
 
+# 6. Creating gif
+
 Asia_Gif <-  animate(Map_Asia_Anim, fps = 5, width = 950, height = 750)
+
+# 7. Saving the gif created (Maybe should not insert)
 
 anim_save("4.Asia.gif", animation = Asia_Gif, path = "C:/Users/Gustav/Desktop/MSc Data Science 1st year/Exploratory data analysis/Assignments/Assignment4" )
 
-# 5) North America gif
+```
+
+
+```{r Creating an animation for North America}
+
+# Steps:
+
+# 1. Filtering the spatial data frame to only retrieve information about North America 
 
 ncov_new_Spatial_USA <- ncov_new_Spatial %>% 
   filter(continent == "North America")
 
-World_Points_USA <- st_centroid(ncov_new_Spatial_USA)
 
-World_Points_USA <- cbind(ncov_new_Spatial_USA, st_coordinates(st_centroid(ncov_new_Spatial_USA$geometry)))
+# 2. Specifying the position of the labels for each country in North America (counting the number of cases as the date progresses) 
+
+World_Points_USA <- st_centroid(ncov_new_Spatial_USA)
+World_Points_USA <- cbind(ncov_new_Spatial_USA,
+                          st_coordinates(st_centroid(ncov_new_Spatial_USA$geometry)))
+
+# 3. Getting data for base map (North America countries)
 
 USA_data <- World %>% 
   filter(continent == "North America")
+
+# 4. Plotting North America map using ggplot() 
 
 Map_USA <- ggplot() + 
   geom_sf(data = USA_data, fill = "gray48") +
   geom_sf(data = ncov_new_Spatial_USA, aes(frame = Date, fill = Cum_Confirmed_Country)) +
   coord_sf(xlim = c(-180,-10), ylim = c(5, 85), expand = FALSE) +
   scale_fill_gradient(low="white", high="red", trans = "log10") +
-  geom_text(data = World_Points_USA, aes(x = X, y = Y, label = Cum_Confirmed_Country), check_overlap = FALSE) + labs(title = "Cumalative confirmed cases of covid 19 - North America", subtitle = "Date: {current_frame}", fill = "Count", x = "Latitude", y = "Longitude" ) + 
+  geom_text(data = World_Points_USA, aes(x = X, y = Y, label = Cum_Confirmed_Country), check_overlap = FALSE) + 
+  labs(title = "Cumalative confirmed cases of covid 19 - North America", subtitle = "Date: {current_frame}", fill = "Count", x = "Latitude", y = "Longitude" ) + 
   theme(title = element_text(size = 14, face = "bold"), panel.grid.major = element_line(color = "gray65", linetype = "dashed", size = 0.5), panel.background = element_rect(fill = "aliceblue"))
-  
+
+# 5. Creating a gganim object 
+
 Map_USA_Anim <-  Map_USA  + 
   transition_manual(Date)
 
+# 6. Creating gif
+
 USA_Gif <-  animate(Map_USA_Anim, fps = 5, width = 950, height = 750)
+
+# 7. Saving the gif created (Maybe should not insert)
 
 anim_save("5.USA.gif", animation = USA_Gif, path = "C:/Users/Gustav/Desktop/MSc Data Science 1st year/Exploratory data analysis/Assignments/Assignment4" )
 
-# 6) Oceania gif
+```
+
+```{r Creating an animation for Oceania}
+
+# Steps:
+
+# 1. Filtering the spatial data frame to only retrieve information about Oceania
 
 ncov_new_Spatial_Oce <- ncov_new_Spatial %>% 
   filter(continent == "Oceania")
 
-World_Points_Oce <- st_centroid(ncov_new_Spatial_Oce)
+# 2. Specifying the position of the labels for each country in Oceania (counting the number of cases as the date progresses) 
 
-World_Points_Oce <- cbind(ncov_new_Spatial_Oce, st_coordinates(st_centroid(ncov_new_Spatial_Oce$geometry)))
+World_Points_Oce <- st_centroid(ncov_new_Spatial_Oce)
+World_Points_Oce <- cbind(ncov_new_Spatial_Oce,
+                          st_coordinates(st_centroid(ncov_new_Spatial_Oce$geometry)))
+
+# 3. Getting data for base map (Oceania countries)  
 
 Oceania_data <- World %>% 
   filter(continent == "Oceania")
+
+# 4. Plotting Oceania map using ggplot()  
 
 Map_Oce <- ggplot() + 
   geom_sf(data = Oceania_data, fill = "gray48") +
   geom_sf(data = ncov_new_Spatial_Oce, aes(frame = Date, fill = Cum_Confirmed_Country)) +
   coord_sf(xlim = c(110,190), ylim = c(-60,20), expand = FALSE) +
   scale_fill_gradient(low="white", high="red", trans = "log10") +
-  geom_text(data = World_Points_Oce, aes(x = X, y = Y, label = Cum_Confirmed_Country), check_overlap = FALSE, size = 6) + labs(title = "Cumalative confirmed cases of covid 19 - Oceania", subtitle = "Date: {current_frame}", fill = "Count", x = "Latitude", y = "Longitude" ) + 
+  geom_text(data = World_Points_Oce, aes(x = X, y = Y, label = Cum_Confirmed_Country), check_overlap = FALSE, size = 6) + 
+  labs(title = "Cumalative confirmed cases of covid 19 - Oceania", subtitle = "Date: {current_frame}", fill = "Count", x = "Latitude", y = "Longitude" ) + 
   theme(title = element_text(size = 14, face = "bold"), panel.grid.major = element_line(color = "gray65", linetype = "dashed", size = 0.5), panel.background = element_rect(fill = "aliceblue"))
+
+# 5. Creating a gganim object 
   
 Map_Oce_Anim <-  Map_Oce  + 
   transition_manual(Date)
 
+# 6. Creating gif
+
 Oce_Gif <-  animate(Map_Oce_Anim, fps = 5, width = 950, height = 750)
+
+# 7. Saving the gif created (Maybe should not insert)
 
 anim_save("6.Oce.gif", animation = Oce_Gif, path = "C:/Users/Gustav/Desktop/MSc Data Science 1st year/Exploratory data analysis/Assignments/Assignment4" )
 
-# 7) South America gif
+```
+
+```{r Creating an animation for South America }
+
+# Steps: 
+
+# 1.Filtering the spatial data frame to only retrieve information about South America
 
 ncov_new_Spatial_SAm <- ncov_new_Spatial %>% 
   filter(continent == "South America")
 
-World_Points_SAm <- st_centroid(ncov_new_Spatial_SAm)
+# 2. Specifying the position of the labels for each country in South America (counting the number of cases as the date progresses) 
 
-World_Points_SAm <- cbind(ncov_new_Spatial_SAm, st_coordinates(st_centroid(ncov_new_Spatial_SAm$geometry)))
+World_Points_SAm <- st_centroid(ncov_new_Spatial_SAm)
+World_Points_SAm <- cbind(ncov_new_Spatial_SAm,
+                          st_coordinates(st_centroid(ncov_new_Spatial_SAm$geometry)))
+
+# 3. Getting data for base map (South America countries)
 
 SAm_data <- World %>% 
   filter(continent == "South America")
+
+# 4. Plotting South America map using ggplot() 
 
 Map_SAm <- ggplot() + 
   geom_sf(data = SAm_data, fill = "gray48") +
   geom_sf(data = ncov_new_Spatial_SAm, aes(frame = Date, fill = Cum_Confirmed_Country)) +
   coord_sf(xlim = c(-100,-30), ylim = c(-60,20), expand = FALSE) +
   scale_fill_gradient(low="white", high="red", trans = "log10") +
-  geom_text(data = World_Points_SAm, aes(x = X, y = Y, label = Cum_Confirmed_Country), check_overlap = FALSE) + labs(title = "Cumalative confirmed cases of covid 19 - South America", subtitle = "Date: {current_frame}", fill = "Count", x = "Latitude", y = "Longitude" ) + 
+  geom_text(data = World_Points_SAm, aes(x = X, y = Y, label = Cum_Confirmed_Country), check_overlap = FALSE) + 
+  labs(title = "Cumalative confirmed cases of covid 19 - South America", subtitle = "Date: {current_frame}", fill = "Count", x = "Latitude", y = "Longitude" ) + 
   theme(title = element_text(size = 14, face = "bold"), panel.grid.major = element_line(color = "gray65", linetype = "dashed", size = 0.5), panel.background = element_rect(fill = "aliceblue"))
-  
+ 
+# 5. Creating a gganim object
+
 Map_SAm_Anim <-  Map_SAm  + 
   transition_manual(Date)
 
+# 6. Creating gif
+
 SAm_Gif <-  animate(Map_SAm_Anim, fps = 5, width = 950, height = 750)
+
+# 7. Saving the gif created (Maybe should not insert)
 
 anim_save("7.SAm.gif", animation =SAm_Gif, path = "C:/Users/Gustav/Desktop/MSc Data Science 1st year/Exploratory data analysis/Assignments/Assignment4" )
 
-# 8) Seven seas (open ocean) gif (Not very imformative)
-
-ncov_new_Spatial_SS <- ncov_new_Spatial %>% 
-  filter(continent == "Seven seas (open ocean)")
-
-World_Points_SS <- st_centroid(ncov_new_Spatial_SS)
-
-World_Points_SS <- cbind(ncov_new_Spatial_SS, st_coordinates(st_centroid(ncov_new_Spatial_SS$geometry)))
-
-SS_data <- World %>% 
-  filter(continent == "Seven seas (open ocean)")
-
-Map_SS <- ggplot() + 
-  geom_sf(data = SS_data) +
-  geom_sf(data = ncov_new_Spatial_SS, aes(frame = Date, fill = Cum_Confirmed_Country)) +
-  scale_fill_gradient(low="white", high="red", trans = "log10") +
-  geom_text(data = World_Points_SS, aes(x = X, y = Y, label = Cum_Confirmed_Country), check_overlap = FALSE) + labs(title = "Cumalative confirmed cases of covid 19 - Seven seas", subtitle = "Date: {current_frame}", fill = "Count", x = "Latitude", y = "Longitude" ) + 
-  theme(title = element_text(size = 14, face = "bold"))
-  
-Map_SS_Anim <-  Map_SS  + 
-  transition_manual(Date)
-
-SS_Gif <-  animate(Map_SS_Anim, fps = 5, width = 950, height = 750)
-
-anim_save("SS.gif", animation =SS_Gif, path = "C:/Users/Gustav/Desktop/MSc Data Science 1st year/Exploratory data analysis/Assignments/Assignment4" )
-
 ```
+
 
 ```{r Importing the merged gif file}
 
@@ -560,8 +686,59 @@ Covid_19_gif <- read.gif("Ass_4_gif.gif")
 
 ```
 
-Part 2: Shiny app development
+```{r Test with faceting - Europe}
 
+# Steps:
+
+# 1. Filtering the spatial data frame to only retrieve information about Europe
+
+ncov_new_Spatial_Eur <- ncov_new_Spatial %>% 
+  filter(continent == "Europe")
+
+# 2. Specifying the position of the labels for each country in Africa (counting the number of cases as the date progresses)
+
+World_Points_Eur <- st_centroid(ncov_new_Spatial_Eur)
+World_Points_Eur <- cbind(ncov_new_Spatial_Eur,
+                          st_coordinates(st_centroid(ncov_new_Spatial_Eur$geometry)))
+
+# 3. Getting data for base map (Europe countries)
+
+Europe_data <- World %>% 
+  filter(continent == "Europe")
+
+# 4. Plotting Europe map using ggplot() 
+
+Map_Eur <- ggplot() + 
+  geom_sf(data = Europe_data, fill = "gray48") +
+  geom_sf(data = ncov_new_Spatial_Eur, aes(frame = Date, fill = Cum_Confirmed_Country)) +
+  coord_sf(xlim = c(-40, 100), ylim = c(30,75), expand = FALSE) +
+  scale_fill_gradient(low="white", high="orange", trans = "log10") +
+  geom_text(data = World_Points_Eur, aes(x = X, y = Y, label = Cum_Confirmed_Country), check_overlap = FALSE) + 
+  labs(title = "Confirmed cases", subtitle = "Date: {current_frame}", fill = "Count", x = "Latitude", y = "Longitude" ) + 
+  theme(title = element_text(size = 8, face = "bold"), panel.grid.major = element_line(color = "gray65", linetype = "dashed", size = 0.5), panel.background = element_rect(fill = "aliceblue"))
+
+
+Map_Eur_Deaths <- ggplot() + 
+  geom_sf(data = Europe_data, fill = "gray48") +
+  geom_sf(data = ncov_new_Spatial_Eur, aes(frame = Date, fill = Deaths_Country)) +
+  coord_sf(xlim = c(-40, 100), ylim = c(30,75), expand = FALSE) +
+  scale_fill_gradient(low="white", high="red", trans = "log10") +
+  geom_text(data = World_Points_Eur, aes(x = X, y = Y, label = Deaths_Country), check_overlap = FALSE) + 
+  labs(title = "Deaths", subtitle = "Date: {current_frame}", fill = "Count", x = "Latitude", y = "Longitude" ) + 
+  theme(title = element_text(size = 8, face = "bold"), panel.grid.major = element_line(color = "gray65", linetype = "dashed", size = 0.5), panel.background = element_rect(fill = "aliceblue"))
+
+Plot_Test <- plot_grid(Map_Eur, Map_Eur_Deaths)
+
+Plot_Test_Anim <-  Plot_Test + transition_manual(Date)
+
+animate(Plot_Test_Anim, fps = 5, width = 950, height = 750)
+
+
+
+```
+
+
+Part 2: Shiny app development
 
 ```{r Shiny app development}
 
@@ -571,24 +748,46 @@ Part 2: Shiny app development
 
 Death_icon <- awesomeIcons(
   icon = "times-circle",
+  library = "fa",
   iconColor = "black",
-  markerColor = "red",
-  library = "fa"
-  
+  markerColor = "red"
 )
 
 Recovery_icon <- awesomeIcons(
   icon = "ambulance",
+  library = "fa",
   iconColor = "black",
-  markerColor = "green",
-  library = "fa"
-  
+  markerColor = "green"
 )
 
-# Country names
+# Adding the continent variavble to data frame
+
+World_Merge_No_Geom <- World_Merge_df %>% 
+  st_set_geometry(value = NULL)
+
+
+Continents_data <- left_join(ncov_new_FINAL_data, World_Merge_No_Geom, by = "Country_Region") %>%
+  group_by(Date, continent) %>% 
+      summarise(Cum_Confirmed_Country = sum(Cum_Confirmed_Country),
+            Recovered_Country = sum(Recovered_Country),
+            Deaths_Country = sum(Deaths_Country),
+            Infected_Country = sum(Infected_Country)) %>% 
+  rename(Country_Region = continent) %>% 
+  as.data.frame()
+
+
+ncov_new_FINAL_data_Plot <- rbind(Continents_data, ncov_new_FINAL_data)
+
+
+
+# 1.1 Country names and continetn names
 
 
 Country_Names <- levels(as.factor(ncov_new_FINAL_data$Country_Region))
+
+Continent_Names <- levels(as.factor(Continents_data$Country_Region))
+
+Country_Region_Names <- c(Continent_Names, Country_Names)  
 
 
 # 1.2 Creating Ranking table of countries
@@ -603,35 +802,49 @@ Rank_Country_Table <- ncov_new_FINAL_data %>%
 # 1.3 Filtering to the desired date of user to reveal map and creating colour pallet
 
 Map_Data <- ncov_new_Spatial %>% 
-  filter(Date == "2020-03-23")
+  filter(Date =="2020-03-23")
 
 Countries_pal <- colorNumeric(palette = "Reds",
                               domain = log(Map_Data$Cum_Confirmed_Country))
 
-# 1.4 Adding reactive variable 
+# 1.4 Adding reactive variable
 
-
+```
+ 
+Begin app here!
+```{r Actual beginning of app}
 
 #2.1 Define all the elements of the  header, sidebar and body of the dashboard. 
 
 header <- dashboardHeader(
-  title = "Covid 19 - 23/03/2020"
+  title = "Covid 19 - 23/03/2020",
+  titleWidth = 250
   
 )
 
 sidebar <- dashboardSidebar(
   
+# Setting the deafault of the sidebar to close  
+collapsed = TRUE  
 # Adding tabs to the sidebar in the dashboard
-  
+ ,  
 sidebarMenu(
 menuItem("Word Data",
-tabName = "world_data"),
+tabName = "world_data", icon = icon("globe")),
 menuItem("Country/Region Data",
-tabName = "country_region_data")
+tabName = "country_region_data", icon = icon("chart-bar"))
  )
 )
   
 body <- dashboardBody(
+  
+  # tags$head(tags$style(HTML('
+  #     .main-header .logo {
+  #       font-family: "Courier New";
+  #       font-weight: bold;
+  #       font-size: 24px;
+  #     }
+  #   '))),
   
 # Linking the tabs created in the sidebar to reflect in the body of the dashboard
   
@@ -668,16 +881,17 @@ fluidRow(
 
 # Creating space for leaflet and table output 
   
-  column(width = 12,
-      leafletOutput("World_Map")
-         ),
+leafletOutput("World_Map", height = 550)
+      
  #  column(width = 3,
- #         dataTableOutput("World_Table"))
- #  
+ #  dataTableOutput("World_Table"))
+ # 
+
   ),
 
 fluidRow(
   column(width = 6,
+          align = "center",
   setSliderColor("red", 1),    
   sliderInput("date","Select data extraction date:",
               min = as.Date("2020-01-22","%Y-%m-%d"),
@@ -688,6 +902,7 @@ fluidRow(
   ),
 
   column(width = 6,
+          align = "left",
          prettyRadioButtons(inputId = "topTen", 
                             label = "Additional information w.r.t chosen date:",
                             choices = c("Normal world map", "Top ten regions with highest death count", "Top ten regions with the higest recovery count"),
@@ -697,14 +912,6 @@ fluidRow(
                           animation = "pulse")
                      
                      )  
-  
-  
-  # column(width = 4,
-  #        materialSwitch(inputId = "Top10Death",label =  "Top 10 death switch", status = "danger")),
-  # 
-  # column(width = 4,
-  #       materialSwitch(inputId = "Top10Recov",label =  "Top 10 Recoveries switch", status = "danger"))
-
 
  )
 ),
@@ -713,27 +920,41 @@ tabItem(tabName = "country_region_data",
         
         sidebarLayout(
           sidebarPanel(
-            
-            selectInput(inputId = "country",
-                        "Select a country:",
-                        choices = Country_Names,
-                        selected = "South Africa",
+ 
+                       
+            selectInput(inputId = "country_continent",
+                        "Select Country/Continent:",
+                        choices = Country_Region_Names ,
+                        selected = "South Africa", 
                         multiple = TRUE),
+            
             prettyRadioButtons(inputId = "DataSelection",
-                          label = "Select data input", 
+                          label = "Select data interest:", 
                           icon = icon("check-circle"),
-                          choiceNames = c("Cummalative cases", "Deaths", "Recoveries", "Infected"),
-                          choiceValues = c("Cum_Confirmed", "Deaths", "Recovered", "Infected"),
-                          selected = "Cum_Confirmed",
+                          choiceNames = c("Cumulative cases", "Deaths", "Recoveries", "Infected"),
+                          choiceValues = c("Cum_Confirmed_Country", "Deaths_Country", "Recovered_Country", "Infected_Country"),
+                          selected = "Cum_Confirmed_Country",
                           animation = "tada", 
-                          status = "danger")
+                          status = "danger"),
+            
+            materialSwitch(inputId = "logScale",
+                           label = "Activate log scale:",
+                           status = "danger"
+                           ),
+            
+            materialSwitch(inputId = "area",
+                           label = "Activate area graph:",
+                           status = "danger"
+                           )
             
           ),
           
           
           
           mainPanel(
-            plotlyOutput("countryPlot")
+            plotlyOutput("countryPlot"),
+            
+            plotlyOutput("FreqPlot")
           )
           
         )
@@ -751,7 +972,9 @@ ui <- dashboardPage(header, sidebar, body, skin = "black")
 
 server <- function(input, output){
 
-# Steps:  
+# Steps:
+
+ 
   
 # 1. Saving reactive variables to minimise duplication of code
   
@@ -820,7 +1043,8 @@ output$G_Infected <- renderValueBox({
 })
 
 # 3. Output for world map
- 
+
+
 
 output$World_Map <- renderLeaflet({ 
   
@@ -876,56 +1100,110 @@ output$World_Map <- renderLeaflet({
       addAwesomeMarkers(lng = Top10Recoveries$Long, lat = Top10Recoveries$Lat, icon = Recovery_icon, popup = ~paste0("<b>","Rank:", Top10Recoveries$Rank,"</b>", "<br/>","<b>","Recoveries:", "</b>",Top10Recoveries$Recovered))
     
   }
+ 
   
   L_World_Map
   
 
   })
 
+
+
 # 4. Plotly output
 
 
 output$countryPlot <- renderPlotly({
-  
-  data <- ncov_new %>% 
-    filter(Country_Region %in% input$country) 
-  
-  
-if(input$DataSelection == "Cum_Confirmed") {
+
+   # NB New variable intorduced ncov_final_data_plot (includes continent data)
+   
+  data <- ncov_new_FINAL_data_Plot %>% 
+    filter(Country_Region %in% input$country_continent) 
   
 
-  Plot <- ggplot(data, aes(x = Date, y = Cum_Confirmed)) +
-    geom_point(aes(color = Country_Region)) +
-    labs(y = "Cummalative cases") +
-    theme(legend.title = element_blank())
+if(input$DataSelection == "Cum_Confirmed_Country") {
+  
+data <-  data %>% 
+  filter(Cum_Confirmed_Country != 0)
+
+y <- data$Cum_Confirmed_Country
+  
+  Plot <- ggplot(data, aes(x = Date, y = Cum_Confirmed_Country , fill = Country_Region)) +
+    geom_col(aes(text = paste0('</br> Cumalative cases: ', Cum_Confirmed_Country,'</br> Date: ', Date, '</br> Country: ', Country_Region)), position = "dodge") +
+    labs(y = "Cummalative cases", fill = "Region") +
+    theme_bw()
 }
   
-if(input$DataSelection == "Deaths") {
-  Plot <- ggplot(data, aes(x = Date, y = Deaths)) +
-    geom_point(aes(color = Country_Region)) +
-    labs(y = "Deaths count") +
-    theme(legend.title = element_blank())
+if(input$DataSelection == "Deaths_Country") {
+  
+  data <-  data %>% 
+  filter(Deaths_Country != 0)
+  
+  y <- data$Deaths_Country
+  
+  Plot <- ggplot(data, aes(x = Date, y = Deaths_Country, fill = Country_Region)) +
+    geom_col(aes(text = paste0('</br> Deaths: ', Deaths_Country,'</br> Date: ', Date, '</br> Country: ', Country_Region)), position = "dodge") +
+    labs(y = "Deaths", fill = "Region") +
+    theme_bw()
 }
 
-if(input$DataSelection == "Recovered") {
-  Plot <- ggplot(data, aes(x = Date, y = Recovered)) +
-    geom_point(aes(color = Country_Region)) +
-    labs(y = "Recovered count") +
-    theme(legend.title = element_blank())
+if(input$DataSelection == "Recovered_Country") {
+  
+  data <-  data %>% 
+  filter(Recovered_Country != 0)
+  
+  y <- data$Recovered_Country
+  
+  Plot <- ggplot(data, aes(x = Date, y = Recovered_Country, fill = Country_Region)) +
+    geom_col(aes(text = paste0('</br> Recoveries: ', Recovered_Country,'</br> Date: ', Date, '</br> Country: ', Country_Region)), position = "dodge") +
+    labs(y = "Recoveries", fill = "Region") +
+    theme_bw()
+    
 }
   
-if(input$DataSelection == "Infected") {
-  Plot <- ggplot(data, aes(x = Date, y = Deaths)) +
-    geom_point(aes(color = Country_Region)) +
-    labs(y = "Infected count") +
-    theme(legend.title = element_blank())  
+if(input$DataSelection == "Infected_Country") {
+  
+  data <-  data %>% 
+  filter(Infected_Country != 0)
+  
+  
+  y <- data$Infected_Country
+  
+  Plot <- ggplot(data, aes(x = Date, y = Infected_Country, fill = Country_Region)) +
+    geom_col(aes(text = paste0('</br> Infected: ',Infected_Country,'</br> Date: ', Date, '</br> Country: ', Country_Region)), position = "dodge") +
+    labs(y = "Infected", fill = "Region") +
+    theme_bw()
 }
+
+  if(input$logScale){
+    
+  Plot <-  Plot + scale_y_log10() 
+    
+  }
   
-  Plot
+  if(input$area){
+
+Plot <- Plot %>% 
+  remove_geom(geom = "col")
+
+Plot <- Plot + geom_area(alpha = 0.6, 
+                         position = "identity",
+                         aes(fill = fct_reorder(Country_Region, y, .desc = TRUE)))
+
+  }
   
+if(input$area)  {
+    
+  ggplotly(Plot, tooltip = c("y","x")) %>% 
+    layout(hovermode = "compare")
+}
+  else {
+    ggplotly(Plot, tooltip = "text") %>% 
+    layout(hovermode = "compare")
+    
+  }
 })
 
-
+ 
 
 }
 
@@ -941,70 +1219,82 @@ shinyApp(ui = ui, server = server )
 
 ```
 
-```{r Shiny example}
-ui <- fluidPage(
-  tags$h1("Pretty radio buttons"),
-  br(),
 
-  fluidRow(
-    column(
-      width = 4,
-      prettyRadioButtons(inputId = "radio1",
-                          label = "Click me!",
-                          choices = c("Click me !", "Me !", "Or me !")),
-      verbatimTextOutput(outputId = "res1"),
-      br(),
-      prettyRadioButtons(inputId = "radio4",  label = "Click me!",
-                          choices = c("Click me !", "Me !", "Or me !"),
-                          outline = TRUE,
-                          plain = TRUE, icon = icon("thumbs-up")),
-      verbatimTextOutput(outputId = "res4")
-    ),
-    column(
-      width = 4,
-      prettyRadioButtons(inputId = "radio2",
-                          label = "Click me!", thick = TRUE,
-                          choices = c("Click me !", "Me !", "Or me !"),
-                          animation = "pulse", status = "info"),
-      verbatimTextOutput(outputId = "res2"),
-      br(),
-      prettyRadioButtons(inputId = "radio5",
-                          label = "Click me!", icon = icon("check"),
-                          choices = c("Click me !", "Me !", "Or me !"),
-                          animation = "tada", status = "default"),
-      verbatimTextOutput(outputId = "res5")
-    ),
-    column(
-      width = 4,
-      prettyRadioButtons(inputId = "radio3",  label = "Click me!",
-                          choices = c("Click me !", "Me !", "Or me !"),
-                          shape = "round", status = "danger",
-                          fill = TRUE, inline = TRUE),
-      verbatimTextOutput(outputId = "res3")
-    )
-  )
+```{r ggplot example}
 
-)
+ dataTest <- ncov_new_FINAL_data %>% 
+  filter(Country_Region == "China" | Country_Region == "Italy")
 
-server <- function(input, output, session) {
 
-  output$res1 <- renderPrint(input$radio1)
-  output$res2 <- renderPrint(input$radio2)
-  output$res3 <- renderPrint(input$radio3)
-  output$res4 <- renderPrint(input$radio4)
-  output$res5 <- renderPrint(input$radio5)
+p <- ggplot(dataTest, aes(x = Date, y = Cum_Confirmed_Country, fill = Country_Region)) +
+  geom_col(aes(text = paste0('</br> Cumalative count: ', Cum_Confirmed_Country,'</br> Date: ', Date, '</br> Country: ', Country_Region)), position = "dodge") 
+  
 
-}
+# Density does not work but the one above does
+y <- dataTest$Cum_Confirmed_Country
 
-shinyApp(ui, server)
+q <-  ggplot(dataTest, aes(x = Date, y = Cum_Confirmed_Country, fill = Country_Region)) +
+  geom_area(aes(fill= fct_reorder(Country_Region,y, .desc = TRUE)), alpha = 0.7)
+  
+
+ ggplotly(q, tooltip = c("x", "y"))
+ 
+ fig + ggplotly()
+ 
+ 
+ tooltip = "text"
+ 
+ 
+  ggplotly(q, tooltip = "label")
+    
+,)
+ aes() 
+ 
+ plot_ly(data = dataTest,
+         x = ~Date,
+         y = ~Cum_Confirmed_Country,
+         type = "scatter",
+         mode = "lines",
+         fill = ~Country_Region)
+ 
+ 
+ 
+  
 
 ```
 
-
 ```{r}
- leaflet() %>% 
-  addProviderTiles(provider = "Thunderforest.TransportDark")
-  
+ui <- fluidPage(
+
+    tags$h1("Modal with spinner"),
+    actionButton("sleep1", "Launch a long calculation"),
+    actionButton("sleep2", "And another one")
+  )
+
+  server <- function(input, output, session) {
+
+    observeEvent(input$sleep1, {
+      show_modal_spinner()
+      Sys.sleep(5)
+      remove_modal_spinner()
+    })
+
+    observeEvent(input$sleep2, {
+      show_modal_spinner(
+        spin = "cube",
+        color = "red",
+        text = "Please wait..."
+      )
+      Sys.sleep(5)
+      remove_modal_spinner()
+    })
+
+  }
+
+  shinyApp(ui, server)
+
+
+
 
 ```
 
