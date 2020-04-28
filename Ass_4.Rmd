@@ -65,6 +65,8 @@ library(egg)
 #install.packages("rnaturalearthdata")
 #install.packages("mapdata")
 #intall,packages("leaflet")
+#install.packages("rgeos")
+#install.packages("rmapshaper")
 
 library(spdplyr)
 library(sf)
@@ -74,6 +76,8 @@ library(rnaturalearth)
 library(rnaturalearthdata)
 library(leaflet)
 library(mapdata)
+library(rgeos)
+library(rmapshaper)
 
 # 1.3 Creating animations
 
@@ -92,7 +96,8 @@ library(gganimate)
 #install.packages("DT")
 #install.packages("shinyWidgets")
 #install.packages("shinybusy")
-
+#install.packages("dygraphs")
+#install.packages("xts")
 
 
 library(shinybusy)
@@ -100,6 +105,8 @@ library(shinyWidgets)
 library(shinydashboard)
 library(DT)
 library(shiny)
+library(dygraphs)
+library(xts)
 
 ```
 
@@ -408,9 +415,9 @@ names(Var_labels) <- c("Cum_Confirmed_Country", "Deaths_Country", "Recovered_Cou
 World_Map <- ggplot() + 
   geom_sf(data = World, fill = "gray48") +
   geom_sf(data = ncov_new_Longer_Spatial, aes(frame = Date, fill = Data_Value)) +
-  scale_fill_gradient(low="lightyellow", high="red", trans = "log10") +
+  scale_fill_gradient2(low="green", mid = "yellow", high="red", trans = "log10", midpoint = 3) +
   labs(title = "World map", subtitle = "Date: {current_frame}", fill = "Count", x = "Latitude", y = "Longitude" ) + 
-  theme(title = element_text(size = 14, face = "bold"), panel.grid.major = element_line(color = "gray65", linetype = "dashed", size = 0.5), panel.background = element_rect(fill = "aliceblue"), strip.text = element_text(size = 11, face = "bold")) +
+  theme(plot.title = element_text(size = 20, face = "bold" , hjust = 0.5), plot.subtitle = element_text(size = 16, face = "bold", colour = "red", hjust = 0.5), axis.title.x = element_text(size = 16), axis.title.y = element_text(size = 16),  legend.title = element_text(size = 16), legend.text = element_text(size = 16), panel.grid.major = element_line(color = "gray65", linetype = "dashed", size = 0.5), panel.background = element_rect(fill = "aliceblue"), strip.text = element_text(size = 16, face = "bold")) +
   facet_wrap(~Variable,
              labeller = labeller(Variable = Var_labels ))
 
@@ -421,11 +428,12 @@ World_Map_anim <-  World_Map  +
 
 # 4. Creating gif 
 
-World_Gif <- animate(World_Map_anim, fps = 5, width = 1000 , height = 1000 )
+World_Gif <- animate(World_Map_anim, fps = 5, width = 950, height = 950 )
 
 # 7. Saving the gif created (Maybe should not insert)
 
-anim_save("1.World_Map.gif", animation = World_Gif, path = "C:/Users/Gustav/Desktop/MSc Data Science 1st year/Exploratory data analysis/Assignments/Assignment4" )
+
+anim_save("1.World_Map.gif", animation = World_Gif, path = "C:/Users/Gustav/Desktop/MSc Data Science 1st year/Exploratory data analysis/Assignments/Assignment4")
 
 ```
 
@@ -455,10 +463,10 @@ Africa_data <- World %>%
 Map_Afr <- ggplot() + 
   geom_sf(data = Africa_data, fill = "gray48") +
   geom_sf(data = ncov_new_Spatial_Afr, aes(frame = Date, fill = Data_Value)) +
-  scale_fill_gradient(low="lightyellow", high="red", trans = "log10") +
+  scale_fill_gradient2(low="green", mid = "yellow", high="red", trans = "log10", midpoint = 1.8) +
   geom_text_repel(data = World_Points_Afr, aes(x = X, y = Y, label = Data_Value), check_overlap = FALSE) + 
   labs(title = "Africa", subtitle = "Date: {current_frame}", fill = "Count", x = "Latitude", y = "Longitude" ) + 
-  theme(title = element_text(size = 12, face = "bold"), panel.grid.major = element_line(color = "gray65", linetype = "dashed", size = 0.5), panel.background = element_rect(fill = "aliceblue"), strip.text = element_text(size = 11, face = "bold")) +
+  theme(plot.title = element_text(size = 20, face = "bold" , hjust = 0.5), plot.subtitle = element_text(size = 16, face = "bold", colour = "red", hjust = 0.5), axis.title.x = element_text(size = 16), axis.title.y = element_text(size = 16),  legend.title = element_text(size = 16), legend.text = element_text(size = 16), panel.grid.major = element_line(color = "gray65", linetype = "dashed", size = 0.5), panel.background = element_rect(fill = "aliceblue"), strip.text = element_text(size = 16, face = "bold")) +
   facet_wrap(~Variable,
              labeller = labeller(Variable = Var_labels ))
 
@@ -504,10 +512,10 @@ Map_Eur <- ggplot() +
   geom_sf(data = Europe_data, fill = "gray48") +
   geom_sf(data = ncov_new_Spatial_Eur, aes(frame = Date, fill = Data_Value)) +
   coord_sf(xlim = c(-40, 45), ylim = c(30,75), expand = FALSE) +
-  scale_fill_gradient(low="lightyellow", high="red", trans = "log10") +
+  scale_fill_gradient2(low="green", mid = "yellow", high="red", trans = "log10", midpoint = 2.7) +
   geom_text_repel(data = World_Points_Eur, aes(x = X, y = Y, label = Data_Value), check_overlap = FALSE) + 
   labs(title = "Europe", subtitle = "Date: {current_frame}", fill = "Count", x = "Latitude", y = "Longitude" ) + 
-  theme(title = element_text(size = 12, face = "bold"), panel.grid.major = element_line(color = "gray65", linetype = "dashed", size = 0.5), panel.background = element_rect(fill = "aliceblue"), strip.text = element_text(size = 11, face = "bold")) +
+  theme(plot.title = element_text(size = 20, face = "bold" , hjust = 0.5), plot.subtitle = element_text(size = 16, face = "bold", colour = "red", hjust = 0.5), axis.title.x = element_text(size = 16), axis.title.y = element_text(size = 16),  legend.title = element_text(size = 16), legend.text = element_text(size = 16), panel.grid.major = element_line(color = "gray65", linetype = "dashed", size = 0.5), panel.background = element_rect(fill = "aliceblue"), strip.text = element_text(size = 16, face = "bold")) +
   facet_wrap(~Variable,
              labeller = labeller(Variable = Var_labels ),
              ncol = 2,
@@ -554,10 +562,10 @@ Asia_data <- World %>%
 Map_Asia <- ggplot() + 
   geom_sf(data = Asia_data, fill = "gray48") +
   geom_sf(data = ncov_new_Spatial_Asia, aes(frame = Date, fill = Data_Value)) +
-  scale_fill_gradient(low="lightyellow", high="red", trans = "log10") +
+  scale_fill_gradient2(low="green", mid = "yellow", high="red", trans = "log10", midpoint = 2.7) +
   geom_text_repel(data = World_Points_Asia, aes(x = X, y = Y, label = Data_Value), check_overlap = FALSE) + 
   labs(title = "Asia", subtitle = "Date: {current_frame}", fill = "Count", x = "Latitude", y = "Longitude" ) + 
-  theme(title = element_text(size = 12, face = "bold"), panel.grid.major = element_line(color = "gray65", linetype = "dashed", size = 0.5), panel.background = element_rect(fill = "aliceblue"), strip.text = element_text(size = 11, face = "bold")) +
+  theme(plot.title = element_text(size = 20, face = "bold" , hjust = 0.5), plot.subtitle = element_text(size = 16, face = "bold", colour = "red", hjust = 0.5), axis.title.x = element_text(size = 16), axis.title.y = element_text(size = 16), legend.title = element_text(size = 16), legend.text = element_text(size = 16), panel.grid.major = element_line(color = "gray65", linetype = "dashed", size = 0.5), panel.background = element_rect(fill = "aliceblue"), strip.text = element_text(size = 16, face = "bold")) +
   facet_wrap(~Variable,
              labeller = labeller(Variable = Var_labels ))
 
@@ -597,16 +605,16 @@ World_Points_USA <- cbind(ncov_new_Spatial_USA,
 USA_data <- World %>% 
   filter(continent == "North America")
 
-# 4. Plotting Africa map using ggplot() 
+# 4. Plotting North Anerica map using ggplot() 
 
 Map_USA <- ggplot() + 
   geom_sf(data = USA_data, fill = "gray48") +
   geom_sf(data = ncov_new_Spatial_USA, aes(frame = Date, fill = Data_Value)) +
   coord_sf(xlim = c(-135,-50), ylim = c(5, 50), expand = FALSE) +
-  scale_fill_gradient(low="lightyellow", high="red", trans = "log10") +
+   scale_fill_gradient2(low="green", mid = "yellow", high="red", trans = "log10", midpoint = 2.7) +
   geom_text_repel(data = World_Points_USA, aes(x = X, y = Y, label = Data_Value), check_overlap = FALSE) + 
   labs(title = "North America", subtitle = "Date: {current_frame}", fill = "Count", x = "Latitude", y = "Longitude" ) + 
-  theme(title = element_text(size = 12, face = "bold"), panel.grid.major = element_line(color = "gray65", linetype = "dashed", size = 0.5), panel.background = element_rect(fill = "aliceblue"), strip.text = element_text(size = 11, face = "bold")) +
+  theme(plot.title = element_text(size = 20, face = "bold" , hjust = 0.5), plot.subtitle = element_text(size = 16, face = "bold", colour = "red", hjust = 0.5), axis.title.x = element_text(size = 16), axis.title.y = element_text(size = 16), legend.title = element_text(size = 16), legend.text = element_text(size = 16), panel.grid.major = element_line(color = "gray65", linetype = "dashed", size = 0.5), panel.background = element_rect(fill = "aliceblue"), strip.text = element_text(size = 16, face = "bold")) +
   facet_wrap(~Variable,
              labeller = labeller(Variable = Var_labels ))
 
@@ -624,6 +632,7 @@ Map_USA_Anim <-  Map_USA +
 anim_save("5.USA.gif", animation =  USA_Gif, path = "C:/Users/Gustav/Desktop/MSc Data Science 1st year/Exploratory data analysis/Assignments/Assignment4" )
 
 ```
+
 
 ```{r Creating an animation for Oceania}
 
@@ -651,10 +660,10 @@ Map_Oce <- ggplot() +
   geom_sf(data = Oceania_data, fill = "gray48") +
   geom_sf(data = ncov_new_Spatial_Oce, aes(frame = Date, fill = Data_Value)) +
   coord_sf(xlim = c(110,190), ylim = c(-60,20), expand = FALSE) +
-  scale_fill_gradient(low="lightyellow", high="red", trans = "log10") +
+  scale_fill_gradient2(low="green", mid = "yellow", high="red", trans = "log10", midpoint = 2.1) +
   geom_text(data = World_Points_Oce, aes(x = X, y = Y, label = Data_Value), check_overlap = FALSE, size = 6, fontface = "bold" ) + 
   labs(title = "Oceania", subtitle = "Date: {current_frame}", fill = "Count", x = "Latitude", y = "Longitude" ) + 
-  theme(title = element_text(size = 12, face = "bold"), panel.grid.major = element_line(color = "gray65", linetype = "dashed", size = 0.5), panel.background = element_rect(fill = "aliceblue"), strip.text = element_text(size = 11, face = "bold")) +
+  theme(plot.title = element_text(size = 20, face = "bold" , hjust = 0.5), plot.subtitle = element_text(size = 16, face = "bold", colour = "red", hjust = 0.5), axis.title.x = element_text(size = 16), axis.title.y = element_text(size = 16), legend.title = element_text(size = 16), legend.text = element_text(size = 16), panel.grid.major = element_line(color = "gray65", linetype = "dashed", size = 0.5), panel.background = element_rect(fill = "aliceblue"), strip.text = element_text(size = 16, face = "bold")) +
   facet_wrap(~Variable,
              labeller = labeller(Variable = Var_labels ))
 
@@ -672,6 +681,7 @@ Oce_Gif <- animate(Map_Oce_Anim, fps = 2, width = 950, height = 950)
 anim_save("6.Oce.gif", animation =  Oce_Gif, path = "C:/Users/Gustav/Desktop/MSc Data Science 1st year/Exploratory data analysis/Assignments/Assignment4" )
 
 ```
+
 
 ```{r Creating an animation for South America }
 
@@ -698,10 +708,10 @@ SA_data <- World %>%
 Map_SA <- ggplot() + 
   geom_sf(data = SA_data, fill = "gray48") +
   geom_sf(data = ncov_new_Spatial_SA , aes(frame = Date, fill = Data_Value)) +
-  scale_fill_gradient(low="lightyellow", high="red", trans = "log10") +
+  scale_fill_gradient2(low="green", mid = "yellow", high="red", trans = "log10", midpoint = 2.3) +
   geom_text(data = World_Points_SA , aes(x = X, y = Y, label = Data_Value), check_overlap = FALSE) + 
   labs(title = "South America", subtitle = "Date: {current_frame}", fill = "Count", x = "Latitude", y = "Longitude" ) + 
-  theme(title = element_text(size = 12, face = "bold"), panel.grid.major = element_line(color = "gray65", linetype = "dashed", size = 0.5), panel.background = element_rect(fill = "aliceblue"), strip.text = element_text(size = 11, face = "bold")) +
+  theme(plot.title = element_text(size = 20, face = "bold" , hjust = 0.5), plot.subtitle = element_text(size = 16, face = "bold", colour = "red", hjust = 0.5), axis.title.x = element_text(size = 16), axis.title.y = element_text(size = 16), legend.title = element_text(size = 16), legend.text = element_text(size = 16), panel.grid.major = element_line(color = "gray65", linetype = "dashed", size = 0.5), panel.background = element_rect(fill = "aliceblue"), strip.text = element_text(size = 16, face = "bold")) +
   facet_wrap(~Variable,
              labeller = labeller(Variable = Var_labels ))
 
@@ -789,27 +799,37 @@ Continent_Names <- levels(as.factor(Continents_data$Country_Region))
 
 Country_Region_Names <- c(Continent_Names, Country_Names)
 
-# 1.4 Filtering to the desired date of user to reveal map and creating colour pallet
+# 1.4 Filtering to select non-zero values for each variable
 
-Map_Data <- ncov_new_Spatial %>% 
-  filter(Date == max(ncov_new_FINAL_data$Date)) # last updated date of data set
+Country_Zero_Less_df <- ncov_new_FINAL_data %>% 
+  filter(Cum_Confirmed_Country != 0,
+         Deaths_Country != 0,
+         Recovered_Country != 0,
+         Infected_Country != 0)
 
-Countries_pal <- colorNumeric(palette = "Reds",
-                              domain = log(Map_Data$Cum_Confirmed_Country))
+# 1.5 Creating colour palets for Cumalative cases
 
 
-# 1.5 Frequency data set of ncov cases
+pal_Cum <- colorNumeric(palette = "YlOrRd", domain = c(0,log(Country_Zero_Less_df$Cum_Confirmed_Country)), na.color = "lightgoldenrodyellow" )
 
-# 1.5.1  Create "day counter" (ref) for data set
 
-ref <- data.frame("Date" = unique(ncov_new_FINAL_data$Date), 
+# 1.6 Frequency data set of ncov cases
+
+# 1.6.1 Bind continents data with rest of data
+
+
+Complete_Country_Region_df <- rbind(Continents_data, ncov_new_FINAL_data) 
+
+# 1.6.2  Create "day counter" (ref) for data set
+
+ref <- data.frame("Date" = unique(Complete_Country_Region_df$Date), 
                   "Day" = c(1:85))
 
-# 1.5.2  Merge ref with ncov_new_FINAL_data
+# 1.6.2  Merge ref with ncov_new_FINAL_data
 
-merge <- left_join(ncov_new_FINAL_data, ref, by = "Date")
+merge <- left_join(Complete_Country_Region_df, ref, by = "Date")
 
-# 1.5.3 Create new columns for individual frequency counts
+# 1.6.3 Create new columns for individual frequency counts
 
 ncov_freq_df <- add_column(merge,
                      "freq_Confirmed" = rep(0,nrow(merge)),
@@ -818,32 +838,77 @@ ncov_freq_df <- add_column(merge,
                      "freq_Infected" = rep(0,nrow(merge)),
                      )
 
-test <- ncov_freq_df[order(ncov_freq_df$Country_Region),]
+Data_freq_Plot <- ncov_freq_df[order(ncov_freq_df$Country_Region),]
 
-for(i in 1:nrow(test)){
+for(i in 1:nrow(Data_freq_Plot)){
   
-  if(test$Day[i] == 1){
-    test$freq_Confirmed[i] <- test$Cum_Confirmed_Country[i]
-    test$freq_Deaths[i] <- test$Deaths_Country[i]
-    test$freq_Recovered[i]<- test$Recovered_Country[i]
-    test$freq_Infected[i] <- test$Infected_Country[i]
+  if(Data_freq_Plot$Day[i] == 1){
+    Data_freq_Plot$freq_Confirmed[i] <- Data_freq_Plot$Cum_Confirmed_Country[i]
+    Data_freq_Plot$freq_Deaths[i] <- Data_freq_Plot$Deaths_Country[i]
+    Data_freq_Plot$freq_Recovered[i]<- Data_freq_Plot$Recovered_Country[i]
+    Data_freq_Plot$freq_Infected[i] <- Data_freq_Plot$Infected_Country[i]
   
   }else{
-    test$freq_Confirmed[i] <- test$Cum_Confirmed_Country[i]-test$Cum_Confirmed_Country[i-1]
-    test$freq_Deaths[i] <- test$Deaths_Country[i] - test$Deaths_Country[i-1]
-    test$freq_Recovered[i]<- test$Recovered_Country[i] - test$Recovered_Country[i-1]
-    test$freq_Infected[i] <- test$Infected_Country[i] - test$Infected_Country[i-1]
+    Data_freq_Plot$freq_Confirmed[i] <- Data_freq_Plot$Cum_Confirmed_Country[i]-Data_freq_Plot$Cum_Confirmed_Country[i-1]
+    Data_freq_Plot$freq_Deaths[i] <- Data_freq_Plot$Deaths_Country[i] - Data_freq_Plot$Deaths_Country[i-1]
+    Data_freq_Plot$freq_Recovered[i]<- Data_freq_Plot$Recovered_Country[i] - Data_freq_Plot$Recovered_Country[i-1]
+    Data_freq_Plot$freq_Infected[i] <- Data_freq_Plot$Infected_Country[i] - Data_freq_Plot$Infected_Country[i-1]
     }
 }
 
+#  1.6.4 Selecting ony the freqeuncy columns
+
+Data_freq_Plot <- Data_freq_Plot %>% 
+  select(-Cum_Confirmed_Country, -Deaths_Country, -Recovered_Country, -Infected_Country)
+
+# 1.7 Simplifying the geometry part of the ncov_new_spatial data frame for easy plotting
+
+ncov_new_Spatial <- ms_simplify(ncov_new_Spatial)
+
+
 ```
- 
+
+```{r Fill testing}
+
+
+pal <-  colorNumeric(palette = "YlOrRd", domain = c(0,log(Country_Zero_Less_df$Cum_Confirmed_Country)), na.color = "lightgoldenrodyellow" )
+
+ncov_new_Spatial %>%
+    filter(Date == "2020-04-15") %>%
+     leaflet(options = leafletOptions(minZoom = 2.5)) %>%
+  addProviderTiles(provider = "CartoDB.Positron", options = providerTileOptions( noWrap = TRUE) ) %>% 
+       addPolygons(weight = 1,
+                   fillOpacity = 0.5,
+                   color = ~pal(log(Cum_Confirmed_Country)),
+                   popup = ~paste0("<b>", Country_Region, "</b>","<br/>",
+                                   "Cases:", Cum_Confirmed_Country,"<br/>",
+                                   "Deaths:", Deaths_Country, "<br/>",
+                                   "Recoveries:", Recovered_Country,"<br/>",
+                                   "Infected:", Infected_Country),
+                   highlight = highlightOptions(weight = 3,
+                                                color = "red",
+                                                bringToFront = TRUE)
+       ) %>%
+       setMaxBounds(lat1 = -90, lat2 = 90, lng1 = -180, lng2 = 180) %>%
+       setView(lat = 8.0817, lng = 17.6078, zoom = 2.5) 
+    #addLegend(position = "bottomright",
+              #pal = pal_Cum)
+
+
+
+
+```
+
+
+
+
 Begin app here!
+
 ```{r Defining ui and server of shiny dashboard}
 
 # Note: The shinydashboard package was used to construct the layout of the dashboard. 
 
-# Steps
+# Steps:
 
 # 1. Defining structure of the UI
 
@@ -912,18 +977,19 @@ body <- dashboardBody(
      ),
    
    fluidRow(
-     column(width = 6,
-            align = "center",
-            setSliderColor("red", 1),
+     
+     panel(
+       column(width = 4,
+            
+              setSliderColor("red", 1),
             sliderInput("date","Select data extraction date:", # Creating slider date input
-                        min = as.Date("2020-01-22","%Y-%m-%d"),
-                        max = as.Date("2020-03-23","%Y-%m-%d"),
-                        value=as.Date("2020-03-23"),
+                        min = as.Date(min(ncov_new_FINAL_data$Date),"%Y-%m-%d"),
+                        max = as.Date(max(ncov_new_FINAL_data$Date),"%Y-%m-%d"),
+                        value=as.Date(max(ncov_new_FINAL_data$Date)),
                         timeFormat="%Y-%m-%d")
             ),
-     
-     column(width = 6,
-            align = "left",
+       
+       column(width = 4,
             prettyRadioButtons(inputId = "topTen", # Creating radio button input
                             label = "Additional information w.r.t chosen date:",
                             choices = c("Normal world map", "Top ten regions with highest death count", "Top ten regions with the higest recovery count"),
@@ -931,45 +997,81 @@ body <- dashboardBody(
                             status = "danger",
                             fill = TRUE, 
                             animation = "pulse")
-            )
+            
+          ),
+       
+       column(width = 4,
+            prettyRadioButtons(inputId = "table", # Creating radio button input
+                            label = "Select the variable for data table:",
+                            choices = c("None", "Cases", "Deaths", "Recoveries", "Infected"),
+                            shape = "round", 
+                            status = "danger",
+                            fill = TRUE, 
+                            animation = "pulse")
      )
+     
+    )
+   
    ),
 
+  fluidRow(
+  tableOutput("Data_frame")
+  )
+
+),
+  
+
 tabItem(tabName = "country_region_data",
-        sidebarLayout(
-          sidebarPanel(
+        column(width = 4,
+               panel( heading = "Data selection",
+                      footer = p(strong("Note:"), "The graphs are fully interactive with a variety of options such as zooming, hovering of mouse to view and compare data values, panning etc."),
+                      status = "danger",
             selectInput(inputId = "country_continent", # For country/region input
                         "Select Country/Continent:",
                         choices = Country_Region_Names ,
-                        selected = "South Africa", 
-                        multiple = TRUE),
-            
+                        selected = "South Africa",
+                        multiple = TRUE,
+                        width = NULL),
+
             prettyRadioButtons(inputId = "DataSelection", # For variable input
-                          label = "Select data interest:", 
+                          label = "Select data interest:",
                           icon = icon("check-circle"),
                           choiceNames = c("Cumulative cases", "Deaths", "Recoveries", "Infected"),
                           choiceValues = c("Cum_Confirmed_Country", "Deaths_Country", "Recovered_Country", "Infected_Country"),
                           selected = "Cum_Confirmed_Country",
-                          animation = "tada", 
-                          status = "danger"),
-            
+                          animation = "tada",
+                          status = "danger",
+                          width = NULL),
+
             materialSwitch(inputId = "logScale", # To enable log-scale
                            label = "Activate log scale:",
-                           status = "danger"
+                           status = "danger",
+                           width = NULL
                            ),
-            
+
             materialSwitch(inputId = "area", # To enable area graph
                            label = "Activate area graph:",
-                           status = "danger"
+                           status = "danger",
+                           width = NULL
                            )
+               )
             ),
-          mainPanel(
-            plotlyOutput("countryPlot"), # Interactive plot of country/region
-            plotlyOutput("FreqPlot")) # Interactive plot of dayly frequencies 
-          )
+        
+        column(width = 8,
+               
+               fluidRow(
+                 h3("Cumulative graph"),
+              plotlyOutput("countryPlot", height = "300px" ), # Interactive plot of country/region
+            ),
+            fluidRow(
+              h3("Frequency graph"),
+              plotlyOutput("FreqPlot", height = "300px") # Interactive plot of daily frequencies
+              )
+            )
         )
- )
+   )
 )
+ 
 
 # 1.4 Saving all elements created to the UI
 
@@ -986,33 +1088,25 @@ server <- function(input, output){
   
 ncov_reactive_data <-  reactive({
   ncov_new_FINAL_data %>% 
-    filter(Date == input$date)
+    filter(Date == input$date) %>% 
+    as.data.frame()
 })
 
-# 2.1.2 Data used to determine top 10 regions with highest recovery/death rate
-
-Top10Deaths <- reactive({ 
-  ncov_new %>%
-  filter(Date == input$date) %>% 
-  arrange(desc(Deaths)) %>% 
-  head(10) %>% 
-  mutate(Rank = seq(1,10, by = 1))
-})
-
-Top10Recoveries <- reactive({
-  ncov_new %>%
-  filter(Date == input$date) %>% 
-  arrange(desc(Recovered)) %>% 
-  head(10) %>% 
-  mutate(Rank = seq(1,10, by = 1))
-})
-
-# 2.1.3 New variable intorduced ncov_final_data_plot (includes continent data)
+# 2.1.2 New variable intorduced ncov_final_data_plot (includes continent data)
    
   data <- reactive({  
     ncov_new_FINAL_data_Plot %>%
       filter(Country_Region %in% input$country_continent)
   })
+
+# 2.1.3 Frequency data that will be used with the dygraph ()
+  
+freq_Data <- reactive({
+  Data_freq_Plot %>% 
+    filter(Country_Region %in% input$country_continent)
+  
+}) 
+
 
 # 2.2 Specifying data to use for value box output
 
@@ -1070,13 +1164,13 @@ output$G_Infected <- renderValueBox({
 
 output$World_Map <- renderLeaflet({ 
   
+  
   L_World_Map <- ncov_new_Spatial %>%
-    filter(Date == input$date) %>% 
-     leaflet(options = leafletOptions(minZoom = 2.5)) %>% 
-       addProviderTiles(provider = "CartoDB.Positron", options = providerTileOptions( noWrap = TRUE) ) %>%  
+    filter(Date == input$date) %>%
+     leaflet(options = leafletOptions(minZoom = 2.5)) %>%
        addPolygons(weight = 1,
-                   fillOpacity = 0.2,
-                   color = ~Countries_pal(log(Cum_Confirmed_Country)),
+                   fillOpacity = 0.5,
+                   color = ~pal_Cum(log(Cum_Confirmed_Country)) ,
                    popup = ~paste0("<b>", Country_Region, "</b>","<br/>",
                                    "Cases:", Cum_Confirmed_Country,"<br/>",
                                    "Deaths:", Deaths_Country, "<br/>",
@@ -1085,71 +1179,184 @@ output$World_Map <- renderLeaflet({
                    highlight = highlightOptions(weight = 3,
                                                 color = "red",
                                                 bringToFront = TRUE)
-       ) %>% 
-       setMaxBounds(lat1 = -90, lat2 = 90, lng1 = -180, lng2 = 180) %>% 
+       ) %>%
+    addProviderTiles(provider = "CartoDB.Positron", options = providerTileOptions( noWrap = TRUE) ) %>%
+       setMaxBounds(lat1 = -90, lat2 = 90, lng1 = -180, lng2 = 180) %>%
        setView(lat = 8.0817, lng = 17.6078, zoom = 2.5)
-  
+    
+
    if(input$topTen == "Normal world map") {
-    
+
     L_World_Map
-     
+
      }
-  
+
+# Options that displays the top 10 locations with the highest death count
+
   if(input$topTen == "Top ten regions with highest death count") {
-  
-    Long <- Top10Deaths() %>% 
-      select(Long)
-    
-    Lat <- Top10Deaths() %>% 
-      select(Lat)
-    
-    Rank <- Top10Deaths() %>% 
-      select(Rank)
-    
-    Deaths <- Top10Recoveries() %>% 
-      select(Deaths)
-    
-    L_World_Map <- L_World_Map %>% 
-      addAwesomeMarkers(lng = Long,
-                        lat = Lat, 
-                        icon = Death_icon, 
-                        popup = ~paste0("<b>", "Rank:", Rank, "</b>", "<br/>", "<b>", "Deaths:", "</b>", Deaths))
-    
-    }
-  
+
+    # Accessing relavant data
+
+    Top10Deaths <-  ncov_new %>%
+      filter(Date == input$date) %>%
+      arrange(desc(Deaths)) %>%
+      head(10) %>%
+      mutate(Rank = seq(1,10, by = 1)) %>%
+      as.data.frame()
+
+    # Plotting of markers on world map
+
+    L_World_Map <- L_World_Map %>%
+      addAwesomeMarkers(lng = Top10Deaths$Long,
+                        lat = Top10Deaths$Lat,
+                        icon = Death_icon,
+                        popup = ~paste0("<b>", "Rank:", Top10Deaths$Rank, "</b>", "<br/>", "<b>", "Deaths:", "</b>", Top10Deaths$Deaths))
+
+  }
+
+# Options that displays the top 10 locations with the highest recovery count
+
   if(input$topTen == "Top ten regions with the higest recovery count") {
-    
-    Long <- Top10Recoveries() %>% 
-      select(Long)
-    
-    Lat <- Top10Recoveries() %>% 
-      select(Lat)
-    
-    Rank <- Top10Recoveries() %>% 
-      select(Rank)
-    
-    Recovered <- Top10Recoveries() %>% 
-      select(Recovered)
-    
-   L_World_Map <- L_World_Map %>% 
-      addAwesomeMarkers(lng = Long,
-                        lat = Lat,
+
+    Top10Recoveries <- ncov_new %>%
+      filter(Date == input$date) %>%
+      arrange(desc(Recovered)) %>%
+      head(10) %>%
+      mutate(Rank = seq(1,10, by = 1)) %>%
+      data.frame()
+
+   L_World_Map <- L_World_Map %>%
+      addAwesomeMarkers(lng = Top10Recoveries$Long,
+                        lat = Top10Recoveries$Lat,
                         icon = Recovery_icon,
-                        popup = ~paste0("<b>", "Rank:", Rank, "</b>", "<br/>", "<b>", "Recoveries:", "</b>", Recovered))
-   
+                        popup = ~paste0("<b>", "Rank:", Top10Recoveries$Rank, "</b>", "<br/>", "<b>", "Recoveries:", "</b>", Top10Recoveries$Recovered))
+
    }
- 
+
   L_World_Map
-  
+
   })
 
 
+# 2.? Data table output
 
-# 2.4 Plotly output
 
+  
+  output$Data_frame <-  renderTable({
+  
+  if(input$table == "None"){
+    
+    Table <- NULL
+    
+  }  
+    
+  if(input$table == "Cases" ){
+  
+  Table <- ncov_new_FINAL_data %>%
+      filter(Date == input$date) %>%
+      arrange(desc(Cum_Confirmed_Country)) %>%
+      head(20) %>%
+      mutate(Rank = seq(1,20, by = 1)) %>%
+      rename(Country = Country_Region,
+             Cases = Cum_Confirmed_Country,
+             Deaths = Deaths_Country,
+             Recoveries = Recovered_Country,
+             Infected = Infected_Country) %>% 
+      as.data.frame()
+  
+  
+
+  Table$Rank <- as.integer(Table$Rank)
+  
+  Table$Date <- as.character(Table$Date)
+  
+  Table <- Table[, c(7, 1, 2, 3, 4, 5, 6)]
+  
+  }
+    
+    if(input$table == "Deaths" ){
+  
+  Table <- ncov_new_FINAL_data %>%
+      filter(Date == input$date) %>%
+      arrange(desc(Deaths_Country)) %>%
+      head(20) %>%
+      mutate(Rank = seq(1,20, by = 1)) %>%
+      rename(Country = Country_Region,
+             Cases = Cum_Confirmed_Country,
+             Deaths = Deaths_Country,
+             Recoveries = Recovered_Country,
+             Infected = Infected_Country) %>% 
+      as.data.frame()
+  
+  
+  Table$Rank <- as.integer(Table$Rank)
+  
+  Table$Date <- as.character(Table$Date)
+  
+  Table <- Table[, c(7, 1, 2, 3, 4, 5, 6)]
+    
+    }
+    
+    if(input$table == "Recoveries" ){
+  
+  Table <- ncov_new_FINAL_data %>%
+      filter(Date == input$date) %>%
+      arrange(desc(Recovered_Country)) %>%
+      head(20) %>%
+      mutate(Rank = seq(1,20, by = 1)) %>%
+      rename(Country = Country_Region,
+             Cases = Cum_Confirmed_Country,
+             Deaths = Deaths_Country,
+             Recoveries = Recovered_Country,
+             Infected = Infected_Country) %>% 
+      as.data.frame()
+  
+  
+
+  Table$Rank <- as.integer(Table$Rank)
+  
+  Table$Date <- as.character(Table$Date)
+  
+  Table <- Table[, c(7, 1, 2, 3, 4, 5, 6)] 
+
+  
+  
+    }
+    
+    if(input$table == "Infected" ){
+  
+  Table <- ncov_new_FINAL_data %>%
+      filter(Date == input$date) %>%
+      arrange(desc(Infected_Country)) %>%
+      head(20) %>%
+      mutate(Rank = seq(1,20, by = 1)) %>%
+      rename(Country = Country_Region,
+             Cases = Cum_Confirmed_Country,
+             Deaths = Deaths_Country,
+             Recoveries = Recovered_Country,
+             Infected = Infected_Country) %>% 
+      as.data.frame()
+  
+  
+  Table$Rank <- as.integer(Table$Rank)
+  
+  Table$Date <- as.character(Table$Date)
+  
+  Table <- Table[, c(7, 1, 2, 3, 4, 5, 6)]
+  
+    }
+    
+     
+    Table
+
+})
+
+
+# 2.4 Plotly output - Cummalative country/region plot
 
 output$countryPlot <- renderPlotly({
 
+# Plotting Cummalative confirmed cases of country/region  
   
 if(input$DataSelection == "Cum_Confirmed_Country") {
   
@@ -1164,7 +1371,9 @@ if(input$DataSelection == "Cum_Confirmed_Country") {
     labs(y = "Cummalative cases", fill = "Region") +
     theme_bw()
 }
-  
+
+# Plotting Deaths of country/region 
+    
 if(input$DataSelection == "Deaths_Country") {
   
   data <-  data() %>% 
@@ -1179,6 +1388,8 @@ if(input$DataSelection == "Deaths_Country") {
     theme_bw()
 }
 
+# Plotting recoveries of country/region 
+  
 if(input$DataSelection == "Recovered_Country") {
   
   data <-  data() %>% 
@@ -1193,7 +1404,9 @@ if(input$DataSelection == "Recovered_Country") {
     theme_bw()
     
 }
-  
+
+# Plotting those still Infected of country/region 
+    
 if(input$DataSelection == "Infected_Country") {
   
   data <-  data() %>% 
@@ -1208,12 +1421,16 @@ if(input$DataSelection == "Infected_Country") {
     labs(y = "Infected", fill = "Region") +
     theme_bw()
 }
+  
+# Inserting optional log scale output   
 
   if(input$logScale){
     
   Plot <-  Plot + scale_y_log10() 
     
   }
+
+# Inserting optional area graph output  
   
   if(input$area){
 
@@ -1221,10 +1438,13 @@ Plot <- Plot %>%
   remove_geom(geom = "col")
 
 Plot <- Plot + geom_area(alpha = 0.6, 
-                         position = "identity",
-                         aes(fill = fct_reorder(Country_Region, y, .desc = TRUE)))
+                         position = "identity")
+
+#aes(fill = fct_reorder(Country_Region, y, .desc = TRUE))
 
   }
+  
+# Actual plotting of plot_ly graph  
   
 if(input$area)  {
     
@@ -1238,12 +1458,150 @@ if(input$area)  {
   
  })
 
- 
+# 2.4.2 Plotly output - Frequecy plot of counntry/region
+
+output$FreqPlot <- renderPlotly({
+  
+  
+# Frequency plot of the total daily cases of the country/region selected
+   
+  if(input$DataSelection == "Cum_Confirmed_Country"){
+    
+    Data_Freq <- freq_Data()
+    
+    y <- freq_Data() %>%
+    select(freq_Confirmed)
+    
+  Plot_2 <- ggplot(Data_Freq, aes(x = Date, y = freq_Confirmed, color = Country_Region, fill = Country_Region )) + 
+    geom_point(aes(text = paste0('</br> Cases: ', freq_Confirmed,'</br> Date: ', Date, '</br> Country: ', Country_Region)), size = 1) + 
+    geom_line()  +
+    labs(y = "Cases (per day)", fill = "Region") +
+    theme_bw() +
+    theme(legend.position = "none") 
+  
+  }
+  
+# Frequency plot of the daily deaths of the country/region
+  
+  if(input$DataSelection == "Deaths_Country"){
+    
+    Data_Freq <- freq_Data()
+    
+    y <- freq_Data() %>%
+    select(freq_Deaths)
+    
+    Plot_2 <- ggplot(Data_Freq, aes(x = Date, y = freq_Deaths, color = Country_Region, fill = Country_Region )) + 
+    geom_point(aes(text = paste0('</br> Deaths: ', freq_Deaths,'</br> Date: ', Date, '</br> Country: ', Country_Region)), size = 1) + 
+    geom_line()  +
+    labs(y = "Deaths (per day)", fill = "Region") +
+    theme_bw() +
+      theme(legend.position = "none") 
+    
+  }
+  
+# Frequency plot of the daily recoveries of the country/region  
+  
+  if(input$DataSelection == "Recovered_Country"){
+    
+    Data_Freq <- freq_Data()
+    
+    y <- freq_Data() %>%
+    select(freq_Recovered)
+    
+    Plot_2 <- ggplot(Data_Freq, aes(x = Date, y = freq_Recovered, color = Country_Region, fill = Country_Region )) + 
+    geom_point(aes(text = paste0('</br> Recoveries: ', freq_Recovered,'</br> Date: ', Date, '</br> Country: ', Country_Region)), size = 1) + 
+    geom_line()  +
+    labs(y = "Recoveries (per day) ", fill = "Region") +
+    theme_bw() +
+      theme(legend.position = "none") 
+    
+  }
+  
+# Frequency plot of the people infected (tested positive) of the country/region   
+  
+  if(input$DataSelection == "Infected_Country"){
+    
+    Data_Freq <- freq_Data()
+    
+    y <- freq_Data() %>%
+    select(freq_Infected)
+    
+    Plot_2 <- ggplot(Data_Freq, aes(x = Date, y = freq_Infected, color = Country_Region, fill = Country_Region )) + 
+    geom_point(aes(text = paste0('</br> Infected:', freq_Infected,'</br> Date: ', Date, '</br> Country: ', Country_Region)), size = 1) + 
+    geom_line()  +
+    labs(y = "Infected (per day) ") +
+    theme_bw() +
+      theme(legend.position = "none") 
+    
+  }
+  
+  # Inserting optional area graph output  
+  
+  if(input$area){
+
+Plot_2 <- Plot_2 + geom_area(alpha = 0.3, 
+                         position = "identity")
+
+  }
+  
+# Actual plotting of plot_ly graph  
+
+    ggplotly(Plot_2, tooltip = "text") %>% 
+    layout(hovermode = "compare")
+  
+  
+})
+
+    
 }
 
 shinyApp(ui = ui, server = server )
 
 ```
+
+
+```{r shiny example}
+
+World_Map_test <-  ggplot() + 
+  geom_sf(data = ncov_new_Spatial, fill = "gray48")
+
+World_Map_test
+
+ncov_Spatial_Simplify <- ms_simplify(ncov_new_Spatial)
+
+World_Map_test2 <-  ggplot() + 
+  geom_sf(data = ncov_Spatial_Simplify, fill = "gray48")
+World_Map_test2
+
+
+World_map_test3 <- ggplot() +
+  geom_sf(data = World)
+
+World_map_test3
+
+Data_Table <-  ncov_new_FINAL_data %>%
+      filter(Date == "2020-04-15") 
+
+# %>%
+#       arrange(desc(Cum_Confirmed_Country)) %>%
+#       head(10) %>%
+#       mutate(Rank = seq(1,10, by = 1)) %>%
+#       rename(Country = Country_Region,
+#              Cases = Cum_Confirmed_Country,
+#              Deaths = Deaths_Country,
+#              Recoveries = Recovered_Country,
+#              Infected = Infected_Country) %>% 
+#       as.data.frame()
+
+Data_Table <- Data_Table[, c(7,1,2,3,4,5,6)]
+
+datatable(Data_Table)
+
+
+```
+
+
+
 
 **** Example ****
 
