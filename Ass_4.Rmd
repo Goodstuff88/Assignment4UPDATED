@@ -129,13 +129,7 @@ As mentioned in section \ref{DW section} the first step of data wrangling is imp
 
 # 1. Loading data 
 
-
-# 1.1 Covid 19 data up to the 23/03/2020 (Most code written for this data set)
-
-# ncov_new <- read.csv(file = "time_series_19_covid_combined_23_03_2020.csv", stringsAsFactors = FALSE)
-
-
-# 1.2 Covid 19 data up to the 15/04/2020 (Test data set)
+# Covid 19 data up to the 15/04/2020 ((Most code written for this data set))
 
 ncov_new <- read.csv(file = "time_series_19_covid_combined_15_04_2020.csv", stringsAsFactors = FALSE)
 
@@ -747,7 +741,7 @@ Part 2: Shiny app development
 
 # Steps:
 
-# 1. Saving variables that are going to be used in the shiny application
+# 1. Saving static variables that are going to be used in the shiny application
 
 
 # 1.1 Creating customised icons for the shiny dashboard 
@@ -807,7 +801,7 @@ Country_Zero_Less_df <- ncov_new_FINAL_data %>%
          Recovered_Country != 0,
          Infected_Country != 0)
 
-# 1.5 Creating colour palets for Cumalative cases
+# 1.5 Creating colour pallete for the world map
 
 
 pal_Cum <- colorNumeric(palette = "YlOrRd", domain = c(0,log(Country_Zero_Less_df$Cum_Confirmed_Country)), na.color = "lightgoldenrodyellow" )
@@ -861,45 +855,7 @@ for(i in 1:nrow(Data_freq_Plot)){
 Data_freq_Plot <- Data_freq_Plot %>% 
   select(-Cum_Confirmed_Country, -Deaths_Country, -Recovered_Country, -Infected_Country)
 
-# 1.7 Simplifying the geometry part of the ncov_new_spatial data frame for easy plotting
-
-ncov_new_Spatial <- ms_simplify(ncov_new_Spatial)
-
-
 ```
-
-```{r Fill testing}
-
-
-pal <-  colorNumeric(palette = "YlOrRd", domain = c(0,log(Country_Zero_Less_df$Cum_Confirmed_Country)), na.color = "lightgoldenrodyellow" )
-
-ncov_new_Spatial %>%
-    filter(Date == "2020-04-15") %>%
-     leaflet(options = leafletOptions(minZoom = 2.5)) %>%
-  addProviderTiles(provider = "CartoDB.Positron", options = providerTileOptions( noWrap = TRUE) ) %>% 
-       addPolygons(weight = 1,
-                   fillOpacity = 0.5,
-                   color = ~pal(log(Cum_Confirmed_Country)),
-                   popup = ~paste0("<b>", Country_Region, "</b>","<br/>",
-                                   "Cases:", Cum_Confirmed_Country,"<br/>",
-                                   "Deaths:", Deaths_Country, "<br/>",
-                                   "Recoveries:", Recovered_Country,"<br/>",
-                                   "Infected:", Infected_Country),
-                   highlight = highlightOptions(weight = 3,
-                                                color = "red",
-                                                bringToFront = TRUE)
-       ) %>%
-       setMaxBounds(lat1 = -90, lat2 = 90, lng1 = -180, lng2 = 180) %>%
-       setView(lat = 8.0817, lng = 17.6078, zoom = 2.5) 
-    #addLegend(position = "bottomright",
-              #pal = pal_Cum)
-
-
-
-
-```
-
-
 
 
 Begin app here!
@@ -946,7 +902,7 @@ body <- dashboardBody(
   tabItems(
     tabItem(tabName = "world_data", # Elements in included in the first tab
             
-# Vlalue boxes will display the cases, deaths, recoveries and infected variables
+# Value boxes will display the number of cases, deaths, recoveries and infected variables
 
             fluidRow(
               column( width = 3,
@@ -971,7 +927,7 @@ body <- dashboardBody(
    
    fluidRow(
      
-     # Space for Map output
+     # Space for World Map output
      
      leafletOutput("World_Map", height = 550)
      ),
@@ -979,15 +935,18 @@ body <- dashboardBody(
    fluidRow(
      
      panel(
+       
+       # Adding date-slider to dashboard
        column(width = 4,
-            
               setSliderColor("red", 1),
-            sliderInput("date","Select data extraction date:", # Creating slider date input
-                        min = as.Date(min(ncov_new_FINAL_data$Date),"%Y-%m-%d"),
-                        max = as.Date(max(ncov_new_FINAL_data$Date),"%Y-%m-%d"),
-                        value=as.Date(max(ncov_new_FINAL_data$Date)),
-                        timeFormat="%Y-%m-%d")
+              sliderInput("date","Select data extraction date:", # Creating slider date input
+                          min = as.Date(min(ncov_new_FINAL_data$Date),"%Y-%m-%d"),
+                          max = as.Date(max(ncov_new_FINAL_data$Date),"%Y-%m-%d"),
+                          value=as.Date(max(ncov_new_FINAL_data$Date)),
+                          timeFormat="%Y-%m-%d")
             ),
+       
+       # Adding radio buttons to select the top ten areas with the higest recoveries and deaths
        
        column(width = 4,
             prettyRadioButtons(inputId = "topTen", # Creating radio button input
@@ -999,6 +958,8 @@ body <- dashboardBody(
                             animation = "pulse")
             
           ),
+       
+       # Adding radio buttons that filter the table output
        
        column(width = 4,
             prettyRadioButtons(inputId = "table", # Creating radio button input
@@ -1014,24 +975,33 @@ body <- dashboardBody(
    
    ),
 
+# Making space for table output
+
   fluidRow(
   tableOutput("Data_frame")
   )
 
 ),
   
+# Creating new tab for the plotting of graphs
 
 tabItem(tabName = "country_region_data",
+        
         column(width = 4,
                panel( heading = "Data selection",
                       footer = p(strong("Note:"), "The graphs are fully interactive with a variety of options such as zooming, hovering of mouse to view and compare data values, panning etc."),
                       status = "danger",
+            
+            # Adding drop down list                    
+                      
             selectInput(inputId = "country_continent", # For country/region input
                         "Select Country/Continent:",
                         choices = Country_Region_Names ,
                         selected = "South Africa",
                         multiple = TRUE,
                         width = NULL),
+            
+            # Adding radio buttons for variable selection
 
             prettyRadioButtons(inputId = "DataSelection", # For variable input
                           label = "Select data interest:",
@@ -1042,13 +1012,17 @@ tabItem(tabName = "country_region_data",
                           animation = "tada",
                           status = "danger",
                           width = NULL),
+            
+            # Adding switch for log scale
 
             materialSwitch(inputId = "logScale", # To enable log-scale
                            label = "Activate log scale:",
                            status = "danger",
                            width = NULL
                            ),
-
+            
+            # Adding switch for area graph
+            
             materialSwitch(inputId = "area", # To enable area graph
                            label = "Activate area graph:",
                            status = "danger",
@@ -1059,6 +1033,8 @@ tabItem(tabName = "country_region_data",
         
         column(width = 8,
                
+              # Adding plotly graphs
+                
                fluidRow(
                  h3("Cumulative graph"),
               plotlyOutput("countryPlot", height = "300px" ), # Interactive plot of country/region
@@ -1167,8 +1143,9 @@ output$World_Map <- renderLeaflet({
   
   L_World_Map <- ncov_new_Spatial %>%
     filter(Date == input$date) %>%
-     leaflet(options = leafletOptions(minZoom = 2.5)) %>%
-       addPolygons(weight = 1,
+    leaflet(options = leafletOptions(minZoom = 2.5)) %>% 
+    addProviderTiles(provider = "CartoDB.Positron", options = providerTileOptions( noWrap = TRUE) ) %>%
+    addPolygons(weight = 1,
                    fillOpacity = 0.5,
                    color = ~pal_Cum(log(Cum_Confirmed_Country)) ,
                    popup = ~paste0("<b>", Country_Region, "</b>","<br/>",
@@ -1178,20 +1155,19 @@ output$World_Map <- renderLeaflet({
                                    "Infected:", Infected_Country),
                    highlight = highlightOptions(weight = 3,
                                                 color = "red",
-                                                bringToFront = TRUE)
-       ) %>%
-    addProviderTiles(provider = "CartoDB.Positron", options = providerTileOptions( noWrap = TRUE) ) %>%
-       setMaxBounds(lat1 = -90, lat2 = 90, lng1 = -180, lng2 = 180) %>%
-       setView(lat = 8.0817, lng = 17.6078, zoom = 2.5)
-    
+                                                bringToFront = TRUE)) %>%
+    setMaxBounds(lat1 = -90, lat2 = 90, lng1 = -180, lng2 = 180) %>%
+    setView(lat = 8.0817, lng = 17.6078, zoom = 2.5)
 
+# Option that displays the normal world map    
+  
    if(input$topTen == "Normal world map") {
 
     L_World_Map
 
      }
 
-# Options that displays the top 10 locations with the highest death count
+# Option that displays the top 10 locations with the highest death count
 
   if(input$topTen == "Top ten regions with highest death count") {
 
@@ -1214,17 +1190,21 @@ output$World_Map <- renderLeaflet({
 
   }
 
-# Options that displays the top 10 locations with the highest recovery count
+# Option that displays the top 10 locations with the highest recovery count
 
   if(input$topTen == "Top ten regions with the higest recovery count") {
 
+    # Accessing relavant data
+    
     Top10Recoveries <- ncov_new %>%
       filter(Date == input$date) %>%
       arrange(desc(Recovered)) %>%
       head(10) %>%
       mutate(Rank = seq(1,10, by = 1)) %>%
       data.frame()
-
+    
+    # Plotting of markers on world map
+    
    L_World_Map <- L_World_Map %>%
       addAwesomeMarkers(lng = Top10Recoveries$Long,
                         lat = Top10Recoveries$Lat,
@@ -1238,18 +1218,19 @@ output$World_Map <- renderLeaflet({
   })
 
 
-# 2.? Data table output
+# 2.4 Data table output
 
+# Option that displays no data table
 
-  
   output$Data_frame <-  renderTable({
-  
+    
   if(input$table == "None"){
-    
-    Table <- NULL
-    
+      
+      Table <- NULL
   }  
-    
+
+# Option that displays top 20 countries with the highest cases   
+        
   if(input$table == "Cases" ){
   
   Table <- ncov_new_FINAL_data %>%
@@ -1264,8 +1245,6 @@ output$World_Map <- renderLeaflet({
              Infected = Infected_Country) %>% 
       as.data.frame()
   
-  
-
   Table$Rank <- as.integer(Table$Rank)
   
   Table$Date <- as.character(Table$Date)
@@ -1274,7 +1253,9 @@ output$World_Map <- renderLeaflet({
   
   }
     
-    if(input$table == "Deaths" ){
+# Option that displays top 20 countries with the highest deaths   
+    
+  if(input$table == "Deaths" ){
   
   Table <- ncov_new_FINAL_data %>%
       filter(Date == input$date) %>%
@@ -1288,14 +1269,15 @@ output$World_Map <- renderLeaflet({
              Infected = Infected_Country) %>% 
       as.data.frame()
   
-  
   Table$Rank <- as.integer(Table$Rank)
   
   Table$Date <- as.character(Table$Date)
   
   Table <- Table[, c(7, 1, 2, 3, 4, 5, 6)]
     
-    }
+  }
+    
+ # Option that displays top 20 countries with the highest recoveries   
     
     if(input$table == "Recoveries" ){
   
@@ -1310,18 +1292,16 @@ output$World_Map <- renderLeaflet({
              Recoveries = Recovered_Country,
              Infected = Infected_Country) %>% 
       as.data.frame()
-  
-  
 
   Table$Rank <- as.integer(Table$Rank)
   
   Table$Date <- as.character(Table$Date)
   
   Table <- Table[, c(7, 1, 2, 3, 4, 5, 6)] 
-
-  
   
     }
+    
+# Option that displays top 20 countries with the highesy infections    
     
     if(input$table == "Infected" ){
   
@@ -1337,7 +1317,6 @@ output$World_Map <- renderLeaflet({
              Infected = Infected_Country) %>% 
       as.data.frame()
   
-  
   Table$Rank <- as.integer(Table$Rank)
   
   Table$Date <- as.character(Table$Date)
@@ -1346,13 +1325,12 @@ output$World_Map <- renderLeaflet({
   
     }
     
-     
     Table
 
 })
 
 
-# 2.4 Plotly output - Cummalative country/region plot
+# 2.5 Plotly output - Cummalative country/region plot
 
 output$countryPlot <- renderPlotly({
 
@@ -1458,7 +1436,7 @@ if(input$area)  {
   
  })
 
-# 2.4.2 Plotly output - Frequecy plot of counntry/region
+# 2.6 Plotly output - Frequecy plot of counntry/region
 
 output$FreqPlot <- renderPlotly({
   
@@ -1544,12 +1522,11 @@ Plot_2 <- Plot_2 + geom_area(alpha = 0.3,
 
   }
   
-# Actual plotting of plot_ly graph  
+  # Actual plotting of plot_ly graph  
 
     ggplotly(Plot_2, tooltip = "text") %>% 
     layout(hovermode = "compare")
-  
-  
+
 })
 
     
@@ -1559,43 +1536,11 @@ shinyApp(ui = ui, server = server )
 
 ```
 
+```{r leaftet}
 
-```{r shiny example}
+leaflet() %>% 
+  addProviderTiles(provider = "CartoDB.Positron")
 
-World_Map_test <-  ggplot() + 
-  geom_sf(data = ncov_new_Spatial, fill = "gray48")
-
-World_Map_test
-
-ncov_Spatial_Simplify <- ms_simplify(ncov_new_Spatial)
-
-World_Map_test2 <-  ggplot() + 
-  geom_sf(data = ncov_Spatial_Simplify, fill = "gray48")
-World_Map_test2
-
-
-World_map_test3 <- ggplot() +
-  geom_sf(data = World)
-
-World_map_test3
-
-Data_Table <-  ncov_new_FINAL_data %>%
-      filter(Date == "2020-04-15") 
-
-# %>%
-#       arrange(desc(Cum_Confirmed_Country)) %>%
-#       head(10) %>%
-#       mutate(Rank = seq(1,10, by = 1)) %>%
-#       rename(Country = Country_Region,
-#              Cases = Cum_Confirmed_Country,
-#              Deaths = Deaths_Country,
-#              Recoveries = Recovered_Country,
-#              Infected = Infected_Country) %>% 
-#       as.data.frame()
-
-Data_Table <- Data_Table[, c(7,1,2,3,4,5,6)]
-
-datatable(Data_Table)
 
 
 ```
