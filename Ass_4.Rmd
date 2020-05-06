@@ -385,7 +385,57 @@ ncov_new_Longer_Spatial <- pivot_longer(data = ncov_new_Spatial,
   st_geometry(ncov_new_Longer_Spatial) <- ncov_new_Longer_Spatial$geometry 
 
 ```
+```{r Plotting for document}
 
+
+ncov_new %>% 
+  filter(Country_Region == "United States")
+
+# Steps:
+
+# 1. Filtering the spatial data frame to only retrieve information about Africa
+
+ncov_new_Spatial_Afr <- ncov_new_Longer_Spatial %>% 
+  filter(continent == "Africa" | Date == "2020-01-22")
+
+# 2. Specifying the position of the labels for each country in Europe (counting the number of cases as the date progresses)
+
+World_Points_Afr <- st_centroid(ncov_new_Spatial_Afr)
+World_Points_Afr <- cbind(ncov_new_Spatial_Afr,
+                    st_coordinates(st_centroid(ncov_new_Spatial_Afr$geometry)))
+
+Var_labels <- c("Cases", "Deaths", "Recoveries", "Infected")
+names(Var_labels) <- c("Cum_Confirmed_Country", "Deaths_Country", "Recovered_Country", "Infected_Country")
+
+# 3. Getting data for base map (Africa countries)
+
+Africa_data <- World %>% 
+  filter(continent == "Africa")
+
+# 4. Plotting Africa map using ggplot() 
+
+Map_Afr <- ggplot() + 
+  geom_sf(data = Africa_data, fill = "gray48") +
+  geom_sf(data = ncov_new_Spatial_Afr, aes(fill = Data_Value)) +
+  scale_fill_gradient2(low="green", mid = "yellow", high="red", trans = "log10", midpoint = 1.8) +
+  geom_text_repel(data = World_Points_Afr, aes(x = X, y = Y, label = Data_Value), check_overlap = FALSE) + 
+  labs(title = "Africa", subtitle = "Date: {current_frame}", fill = "Count", x = "Latitude", y = "Longitude" ) + 
+  theme(plot.title = element_text(size = 20, face = "bold" , hjust = 0.5), plot.subtitle = element_text(size = 16, face = "bold", colour = "red", hjust = 0.5), axis.title.x = element_text(size = 16), axis.title.y = element_text(size = 16),  legend.title = element_text(size = 16), legend.text = element_text(size = 16), panel.grid.major = element_line(color = "gray65", linetype = "dashed", size = 0.5), panel.background = element_rect(fill = "aliceblue"), strip.text = element_text(size = 16, face = "bold")) +
+  facet_wrap(~Variable,
+             labeller = labeller(Variable = Var_labels ))
+
+
+Map_Afr
+
+jpeg(filename = "Afr_Map_Start.jpg",
+     width = 1000,
+     height = 1000,
+     quality = 100)
+Map_Afr
+dev.off()
+
+
+```
 
 ```{r Creating animation of the world map }
 
