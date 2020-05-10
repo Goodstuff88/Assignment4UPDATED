@@ -1,17 +1,11 @@
 ---
 title: "Assignment 4"
 author: "Gustav Oosthuizen - OSTGUS001"
-date: '`r format(Sys.Date(), "%d-%B-%Y")`'
-output:
-  pdf_document:
-    highlight: pygments
-    keep_tex: yes
-    number_sections: yes
-    toc: yes
-    toc_depth: 4
-    fig_caption: true
-citation_package: "biblatex"
-bibliography: "Ass_4.bib"
+date: "11-05-2020"
+output: 
+ html_document:
+   toc: true
+   toc_depth: 4
 ---
 
 
@@ -19,7 +13,6 @@ bibliography: "Ass_4.bib"
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
-\pagebreak
 
 ```{r Installing packages, include=FALSE}
 
@@ -111,17 +104,15 @@ library(xts)
 ```
 
 
-\section{Data wrangling} \label{DW section}
+# Data wrangling 
 
-The data wrangling consist of importing, tidying and transforming the data set [@wickham2016r].
+The data wrangling consist of importing, tidying and transforming the data set.
 
-\subsection{Imporing data} 
+## Imporing data
 
-As mentioned in section \ref{DW section} the first step of data wrangling is importing the data.
+The first step of data wrangling is the importing of the data.
 
-***** START CODE - for reproduceability *****
-
-```{r Loading covid 19 data}
+```{r Loading covid 19 data, include=FALSE}
 
 # Note: The original data file will be attached for reproducability.
 
@@ -131,17 +122,18 @@ As mentioned in section \ref{DW section} the first step of data wrangling is imp
 
 # Covid 19 data up to the 15/04/2020 ((Most code written for this data set))
 
-ncov_new <- read.csv(file = "time_series_19_covid_combined_15_04_2020.csv", stringsAsFactors = FALSE)
+ncov_new <- read.csv("https://raw.githubusercontent.com/Goodstuff88/Assignment4UPDATED/master/time_series_19_covid_combined_10-05-2020.csv",
+                     stringsAsFactors = FALSE)
 
 ```
 
 
-\subsection{Tiding and transforming the data}
+# Tiding and transforming the data
 
-The second and thrid steps of data wrangling is tiding and transforming the data. The variables of the "ncovr_new" data set will be investigated and the nesseccary changes/transformations will be made to get the data in a tidy format.   
+The second and thrid steps of data wrangling is tiding and transforming the data. The variables of the "ncovr_new" data set will be investigated and the nesseccary changes/transformations will be made to get the data in a workable format.   
 
 
-```{r Investigating variables and treating missing values in data sets}
+```{r Investigating variables and treating missing values in data sets, include=FALSE}
 
 # Steps:
 
@@ -171,18 +163,25 @@ sum(is.na(ncov_new$Deaths))
 
 ncov_new %>% 
   filter(is.na(Confirmed))
+         
+# Remark: Seems that all the missing vales is from the same location in Canada.         
 
-# Remark: It seems to be associated with a sertain location in Canada. The "Recovered" variable is populated but not the "Deaths" or "Confirmed" variables. It would be best to totally ignore these instances since they offer no value. All three variables need to be known for data to be useful.
+ncov_new %>% 
+  filter(is.na(Recovered)) %>% 
+  distinct(Province.State)
+
+# Remark: The following Province state, does not have recovery data. 
+
+# It seems that there is a lack of data for Canada. The data is not complete. For simplicity it would be best to not work with the NA values. Therefore, the data associated with Canda will be omited. All three variables need to be known for data to be useful for further functions to operate correctly.
 
 # 3. Remove instances with NA values
 
 ncov_new <- na.omit(ncov_new)
 
-
 ```
 
 
-```{r Additions and transformations to data set}
+```{r Additions and transformations to data set, include=FALSE}
 
 # Steps:
 
@@ -205,8 +204,11 @@ ncov_new <- ncov_new %>%
 
 ```
 
+# Creating visual animation and web aplication
 
-```{r Loading of spatial data}
+To create the visual animation and web aplication, additional elements need to be added to the data set. To creat the desired visual animation was neccessary to attach a geometry variable (spatial object) to the exsiting "ncov_new" data set. This was done by making use of the natural earth data.    
+
+```{r Loading of spatial data, include=FALSE}
 
 # Note: The following spatial data was obtained by installing the naturalearth packages.
 
@@ -219,7 +221,7 @@ World <- ne_countries(scale = "medium", returnclass = "sf")
 ```
 
 
-```{r Making neccessary changes to accomplish merging of ncov_new and World data frames}
+```{r Making neccessary changes to accomplish merging of ncov_new and World data frames, include=FALSE}
 
 # Note: The "Country_Region" variable will be used to join the spatial data frame ("World") and the ncov_new data frame. Therfore, a geometry variable will be added to the ncov_new data frame.  
 
@@ -237,8 +239,11 @@ World_df <- data.frame( Country_Region = World$name_long,
 
 Country_Test_df <- left_join(ncov_new, World_df, by = "Country_Region" )
 
+# Investigating if join was sucessful (No NA's should be present)
 
-# Remark: There are NA's present. These country names that cause this will be investigated.
+sum(is.na(Country_Test_df$Pop_Estimate)) 
+
+# Remark: There are NA's present, meaning there were some mis-match in th merging operation of the country names. These country will be investigated. It is probably due to spelling that caused the NA's.
 
 # 1.3 Investigation of the countries that present NA values
 
@@ -330,9 +335,9 @@ World_Merge_df <- World %>%
 ```
 
 
-```{r Merging operation of spatial data}
+```{r Merging operation of spatial data, include=FALSE}
 
-# Note: The following code chunk deals with creating a data frame that contains the nessecceray data that will be used to create plots of a world map.
+# Note: The following code chunk deals with creating a data frame that contains the necessery data that will be used to create plots of a world map.
 
 
 # Steps:
@@ -360,12 +365,12 @@ st_geometry(ncov_new_Spatial) <- ncov_new_Spatial$geometry
 ```
 
 
-\section{Visualisations}
+## Visual animation
 
-\subsection{Part 1 - Animation development}
+The data is now in the correct format, therefore the development of the animations can commence.    
 
 
-```{r  Intoduction to animation}
+```{r  Intoduction to animation, include=FALSE}
 
 # Note: The following code blocks will be associated with creating an animations to give insight on the spread of covid 19 gloabally. Creating a single animation of the world map and showing the 4 variables of interest (cases, deaths, recoveries and infected) of covid 19 is insightful, but there is a lack in detail. Therefore it was decided to make multiple animations (gifs) and zooming into the continents to observe more detail.
 
@@ -385,59 +390,9 @@ ncov_new_Longer_Spatial <- pivot_longer(data = ncov_new_Spatial,
   st_geometry(ncov_new_Longer_Spatial) <- ncov_new_Longer_Spatial$geometry 
 
 ```
-```{r Plotting for document}
 
 
-ncov_new %>% 
-  filter(Country_Region == "United States")
-
-# Steps:
-
-# 1. Filtering the spatial data frame to only retrieve information about Africa
-
-ncov_new_Spatial_Afr <- ncov_new_Longer_Spatial %>% 
-  filter(continent == "Africa" | Date == "2020-01-22")
-
-# 2. Specifying the position of the labels for each country in Europe (counting the number of cases as the date progresses)
-
-World_Points_Afr <- st_centroid(ncov_new_Spatial_Afr)
-World_Points_Afr <- cbind(ncov_new_Spatial_Afr,
-                    st_coordinates(st_centroid(ncov_new_Spatial_Afr$geometry)))
-
-Var_labels <- c("Cases", "Deaths", "Recoveries", "Infected")
-names(Var_labels) <- c("Cum_Confirmed_Country", "Deaths_Country", "Recovered_Country", "Infected_Country")
-
-# 3. Getting data for base map (Africa countries)
-
-Africa_data <- World %>% 
-  filter(continent == "Africa")
-
-# 4. Plotting Africa map using ggplot() 
-
-Map_Afr <- ggplot() + 
-  geom_sf(data = Africa_data, fill = "gray48") +
-  geom_sf(data = ncov_new_Spatial_Afr, aes(fill = Data_Value)) +
-  scale_fill_gradient2(low="green", mid = "yellow", high="red", trans = "log10", midpoint = 1.8) +
-  geom_text_repel(data = World_Points_Afr, aes(x = X, y = Y, label = Data_Value), check_overlap = FALSE) + 
-  labs(title = "Africa", subtitle = "Date: {current_frame}", fill = "Count", x = "Latitude", y = "Longitude" ) + 
-  theme(plot.title = element_text(size = 20, face = "bold" , hjust = 0.5), plot.subtitle = element_text(size = 16, face = "bold", colour = "red", hjust = 0.5), axis.title.x = element_text(size = 16), axis.title.y = element_text(size = 16),  legend.title = element_text(size = 16), legend.text = element_text(size = 16), panel.grid.major = element_line(color = "gray65", linetype = "dashed", size = 0.5), panel.background = element_rect(fill = "aliceblue"), strip.text = element_text(size = 16, face = "bold")) +
-  facet_wrap(~Variable,
-             labeller = labeller(Variable = Var_labels ))
-
-
-Map_Afr
-
-jpeg(filename = "Afr_Map_Start.jpg",
-     width = 1000,
-     height = 1000,
-     quality = 100)
-Map_Afr
-dev.off()
-
-
-```
-
-```{r Creating animation of the world map }
+```{r Creating animation of the world map, echo=FALSE, warning=FALSE, message=FALSE }
 
 # Steps
 
@@ -451,7 +406,7 @@ World_points <- cbind(ncov_new_Longer_Spatial,
 
 # 2.1 Specifying labels for the facets
 
-Var_labels <- c("Cases", "Deaths", "Recoveries", "Infected")
+Var_labels <- c("Cases", "Deaths", "Recoveries", "Infections")
 names(Var_labels) <- c("Cum_Confirmed_Country", "Deaths_Country", "Recovered_Country", "Infected_Country")
 
 # 2.2 Use ggplot() to plot
@@ -474,15 +429,14 @@ World_Map_anim <-  World_Map  +
 
 World_Gif <- animate(World_Map_anim, fps = 5, width = 950, height = 950 )
 
-# 7. Saving the gif created (Maybe should not insert)
+# 5. Displaying Gif created
 
-
-anim_save("1.World_Map.gif", animation = World_Gif, path = "C:/Users/Gustav/Desktop/MSc Data Science 1st year/Exploratory data analysis/Assignments/Assignment4")
+World_Gif
 
 ```
 
 
-```{r Creating an animation for Africa}
+```{r Creating an animation for Africa, echo=FALSE, warning=FALSE, message=FALSE}
 
 # Steps:
 
@@ -523,14 +477,14 @@ Map_Afr_Anim <-  Map_Afr +
 
 Afr_Gif<- animate(Map_Afr_Anim, fps = 2, width = 950, height = 950)
 
-# 7. Saving the gif created (Maybe should not insert)
+# 7. Displaying Gif created
 
-anim_save("2.Afr.gif", animation = Afr_Gif, path = "C:/Users/Gustav/Desktop/MSc Data Science 1st year/Exploratory data analysis/Assignments/Assignment4" )
+Afr_Gif
 
 ```
 
 
-```{r Creating an animation for Europe}
+```{r Creating an animation for Europe, echo=FALSE, warning=FALSE, message=FALSE}
 
 # Steps:
 
@@ -574,14 +528,14 @@ Map_Eur_Anim <-  Map_Eur +
 
  Eur_Gif <- animate(Map_Eur_Anim, fps = 2, width = 950, height = 950)
 
-# 7. Saving the gif created (Maybe should not insert)
+# 7. Displaying Gif created
 
-anim_save("3.Eur.gif", animation = Eur_Gif, path = "C:/Users/Gustav/Desktop/MSc Data Science 1st year/Exploratory data analysis/Assignments/Assignment4" )
+Eur_Gif
 
 ```
 
 
-```{r Creating an animation for Asia}
+```{r Creating an animation for Asia, echo=FALSE, warning=FALSE, message=FALSE}
 
 # Steps:
 
@@ -622,14 +576,14 @@ Map_Asia_Anim <-  Map_Asia +
 
  Asia_Gif <- animate(Map_Asia_Anim, fps = 2, width = 950, height = 950)
 
-# 7. Saving the gif created (Maybe should not insert)
+# 7. Displaying Gif created
 
-anim_save("4.Asia.gif", animation = Asia_Gif, path = "C:/Users/Gustav/Desktop/MSc Data Science 1st year/Exploratory data analysis/Assignments/Assignment4" )
+Asia_Gif
 
 ```
 
 
-```{r Creating an animation for North America}
+```{r Creating an animation for North America, echo=FALSE, warning=FALSE, message=FALSE}
 
 # Steps:
 
@@ -671,14 +625,14 @@ Map_USA_Anim <-  Map_USA +
 
  USA_Gif <- animate(Map_USA_Anim, fps = 2, width = 950, height = 950)
 
-# 7. Saving the gif created (Maybe should not insert)
+# 7. Displaying Gif created
 
-anim_save("5.USA.gif", animation =  USA_Gif, path = "C:/Users/Gustav/Desktop/MSc Data Science 1st year/Exploratory data analysis/Assignments/Assignment4" )
+USA_Gif
 
 ```
 
 
-```{r Creating an animation for Oceania}
+```{r Creating an animation for Oceania, echo=FALSE, warning=FALSE, message=FALSE}
 
 # Steps:
 
@@ -720,14 +674,14 @@ Map_Oce_Anim <-  Map_Oce +
 
 Oce_Gif <- animate(Map_Oce_Anim, fps = 2, width = 950, height = 950)
 
-# 7. Saving the gif created (Maybe should not insert)
+# 7. Displaying Gif created
 
-anim_save("6.Oce.gif", animation =  Oce_Gif, path = "C:/Users/Gustav/Desktop/MSc Data Science 1st year/Exploratory data analysis/Assignments/Assignment4" )
+Oce_Gif
 
 ```
 
 
-```{r Creating an animation for South America }
+```{r Creating an animation for South America, echo=FALSE, warning=FALSE, message=FALSE }
 
 # Steps:
 
@@ -768,24 +722,18 @@ Map_SA_Anim <-  Map_SA +
 
 SA_Gif <- animate(Map_SA_Anim, fps = 2, width = 950, height = 950)
 
-# 7. Saving the gif created (Maybe should not insert)
+# 7. Displaying Gif created
 
-anim_save("7.SAm.gif", animation =  SA_Gif, path = "C:/Users/Gustav/Desktop/MSc Data Science 1st year/Exploratory data analysis/Assignments/Assignment4" )
-
-```
-
-
-```{r Importing the merged gif file}
-
-# Doesnt seem to work
-
-Covid_19_gif <- read.gif("Ass_4_gif.gif")
+SA_Gif
 
 ```
 
-Part 2: Shiny app development
 
-```{r Introduction to shiny dashboard development}
+## Web application
+
+Most of the variables and tables created are in the correct format to support the functioning of the web aplication developed. In the intoduction code block some additional variables were created support the function of some elements in the dashboard. 
+
+```{r Introduction to shiny dashboard development, include=FALSE}
 
 # Note: The following blocks of code will be associated with the development of the final Shiny dashboard. 
 
@@ -867,7 +815,7 @@ Complete_Country_Region_df <- rbind(Continents_data, ncov_new_FINAL_data)
 # 1.6.2  Create "day counter" (ref) for data set
 
 ref <- data.frame("Date" = unique(Complete_Country_Region_df$Date), 
-                  "Day" = c(1:85))
+                  "Day" = c(1:109))
 
 # 1.6.2  Merge ref with ncov_new_FINAL_data
 
@@ -907,10 +855,9 @@ Data_freq_Plot <- Data_freq_Plot %>%
 
 ```
 
+Note: If the app is not runned using the R-script file (app.R) this code block can be used to launch the web aplication. 
 
-Begin app here!
-
-```{r Defining ui and server of shiny dashboard}
+```{r Defining ui and server of shiny dashboard, include=FALSE}
 
 # Note: The shinydashboard package was used to construct the layout of the dashboard. 
 
@@ -921,7 +868,7 @@ Begin app here!
 # 1.1 Adding dashboard header 
 
 header <- dashboardHeader(
-  title = "Covid 19 - 23/03/2020",
+  title = "Covid 19 - 09/05/2020",
   titleWidth = 250
 )
 
@@ -1014,7 +961,7 @@ body <- dashboardBody(
        column(width = 4,
             prettyRadioButtons(inputId = "table", # Creating radio button input
                             label = "Select the variable for data table:",
-                            choices = c("None", "Cases", "Deaths", "Recoveries", "Infected"),
+                            choices = c("None", "Cases", "Deaths", "Recoveries", "Infections"),
                             shape = "round", 
                             status = "danger",
                             fill = TRUE, 
@@ -1056,7 +1003,7 @@ tabItem(tabName = "country_region_data",
             prettyRadioButtons(inputId = "DataSelection", # For variable input
                           label = "Select data interest:",
                           icon = icon("check-circle"),
-                          choiceNames = c("Cumulative cases", "Deaths", "Recoveries", "Infected"),
+                          choiceNames = c("Cumulative cases", "Deaths", "Recoveries", "Infections"),
                           choiceValues = c("Cum_Confirmed_Country", "Deaths_Country", "Recovered_Country", "Infected_Country"),
                           selected = "Cum_Confirmed_Country",
                           animation = "tada",
@@ -1182,7 +1129,7 @@ output$G_Infected <- renderValueBox({
     sum()
   
   valueBox(value = Infected,
-           subtitle = "Global infected cases",
+           subtitle = "Global infections",
            icon = icon("stethoscope", lib = "font-awesome"), color = "red")
 })
 
@@ -1202,7 +1149,7 @@ output$World_Map <- renderLeaflet({
                                    "Cases:", Cum_Confirmed_Country,"<br/>",
                                    "Deaths:", Deaths_Country, "<br/>",
                                    "Recoveries:", Recovered_Country,"<br/>",
-                                   "Infected:", Infected_Country),
+                                   "Infections:", Infected_Country),
                    highlight = highlightOptions(weight = 3,
                                                 color = "red",
                                                 bringToFront = TRUE)) %>%
@@ -1292,7 +1239,7 @@ output$World_Map <- renderLeaflet({
              Cases = Cum_Confirmed_Country,
              Deaths = Deaths_Country,
              Recoveries = Recovered_Country,
-             Infected = Infected_Country) %>% 
+             Infections = Infected_Country) %>% 
       as.data.frame()
   
   Table$Rank <- as.integer(Table$Rank)
@@ -1316,7 +1263,7 @@ output$World_Map <- renderLeaflet({
              Cases = Cum_Confirmed_Country,
              Deaths = Deaths_Country,
              Recoveries = Recovered_Country,
-             Infected = Infected_Country) %>% 
+             Infections = Infected_Country) %>% 
       as.data.frame()
   
   Table$Rank <- as.integer(Table$Rank)
@@ -1340,7 +1287,7 @@ output$World_Map <- renderLeaflet({
              Cases = Cum_Confirmed_Country,
              Deaths = Deaths_Country,
              Recoveries = Recovered_Country,
-             Infected = Infected_Country) %>% 
+             Infections = Infected_Country) %>% 
       as.data.frame()
 
   Table$Rank <- as.integer(Table$Rank)
@@ -1353,7 +1300,7 @@ output$World_Map <- renderLeaflet({
     
 # Option that displays top 20 countries with the highesy infections    
     
-    if(input$table == "Infected" ){
+    if(input$table == "Infections" ){
   
   Table <- ncov_new_FINAL_data %>%
       filter(Date == input$date) %>%
@@ -1364,7 +1311,7 @@ output$World_Map <- renderLeaflet({
              Cases = Cum_Confirmed_Country,
              Deaths = Deaths_Country,
              Recoveries = Recovered_Country,
-             Infected = Infected_Country) %>% 
+             Infections = Infected_Country) %>% 
       as.data.frame()
   
   Table$Rank <- as.integer(Table$Rank)
@@ -1445,8 +1392,8 @@ if(input$DataSelection == "Infected_Country") {
     select(Infected_Country)
   
   Plot <- ggplot(data, aes(x = Date, y = Infected_Country, fill = Country_Region)) +
-    geom_col(aes(text = paste0('</br> Infected: ', Infected_Country,'</br> Date: ', Date, '</br> Country: ', Country_Region)), position = "dodge") +
-    labs(y = "Infected", fill = "Region") +
+    geom_col(aes(text = paste0('</br> Infections: ', Infected_Country,'</br> Date: ', Date, '</br> Country: ', Country_Region)), position = "dodge") +
+    labs(y = "Infections", fill = "Region") +
     theme_bw()
 }
   
@@ -1555,9 +1502,9 @@ output$FreqPlot <- renderPlotly({
     select(freq_Infected)
     
     Plot_2 <- ggplot(Data_Freq, aes(x = Date, y = freq_Infected, color = Country_Region, fill = Country_Region )) + 
-    geom_point(aes(text = paste0('</br> Infected:', freq_Infected,'</br> Date: ', Date, '</br> Country: ', Country_Region)), size = 1) + 
+    geom_point(aes(text = paste0('</br> Infections:', freq_Infected,'</br> Date: ', Date, '</br> Country: ', Country_Region)), size = 1) + 
     geom_line()  +
-    labs(y = "Infected (per day) ") +
+    labs(y = "Infections (per day) ") +
     theme_bw() +
       theme(legend.position = "none") 
     
@@ -1585,42 +1532,4 @@ Plot_2 <- Plot_2 + geom_area(alpha = 0.3,
 shinyApp(ui = ui, server = server )
 
 ```
-
-```{r leaftet}
-
-leaflet() %>% 
-  addProviderTiles(provider = "CartoDB.Positron")
-
-
-
-```
-
-
-
-
-**** Example ****
-
-
-As seen by figure \ref{fig:Normal_Distribution}, the normal distribution is plotted.
-Remember the default figure width height is 6 x 4.5 
-
-```{r Normal_Distribution, fig.height= 3, fig.width=4.5 , fig.align='center', fig.cap= "The normal distribution curve", echo=FALSE}
-
-x <- rnorm(100)
-
-hist(x)
-
-ncov_new_FINAL_data %>%
-  filter(Date == "2020-03-23") %>% 
-  select(Cum_Confirmed_Country) %>%
-    sum()
-  
-
-
-```
-
-
-\pagebreak
-
-\section{References}
 
